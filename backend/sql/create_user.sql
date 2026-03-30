@@ -1,0 +1,16 @@
+-- Oracle XE User Creation for Fatigue Tracker
+-- Run these as SYSTEM or SYSDBA
+
+CREATE USER fatigue_tracker
+IDENTIFIED BY fatigue123
+DEFAULT TABLESPACE users
+TEMPORARY TABLESPACE temp
+ACCOUNT UNLOCK;
+
+GRANT CONNECT, RESOURCE TO fatigue_tracker;
+GRANT CREATE SESSION TO fatigue_tracker;
+GRANT CREATE TABLE, CREATE VIEW, CREATE SEQUENCE, CREATE TRIGGER, CREATE PROCEDURE TO fatigue_tracker;
+GRANT UNLIMITED TABLESPACE TO fatigue_tracker;
+
+ALTER USER fatigue_tracker ACCOUNT UNLOCK;
+ALTER USER fatigue_tracker IDENTIFIED BY fatigue123;
