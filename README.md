@@ -31,12 +31,17 @@ Once the user is created, connect to the database using the `fatigue_tracker` cr
 The backend is located in the `backend/` directory.
 
 ### Configuration
-Update the `backend/.env` file with the correct credentials:
-```env
-DB_USER=fatigue_tracker
-DB_PASS=fatigue123
-DB_SERVICE=XEPDB1
-```
+1. Navigate to the `backend/` directory.
+2. Initialize your configuration by copying the example environment file:
+   ```cmd
+   copy .env.example .env
+   ```
+3. Update your `.env` with the following credentials (pre-configured for your project setup):
+   ```env
+   DB_USER=fatigue_tracker
+   DB_PASS=fatigue123
+   DB_SERVICE=XEPDB1
+   ```
 
 ### Installation
 1. Activate the virtual environment:
