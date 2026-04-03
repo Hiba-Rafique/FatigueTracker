@@ -39,7 +39,7 @@ The backend is located in the `backend/` directory.
 3. Update your `.env` with the following credentials (pre-configured for your project setup):
    ```env
    DB_USER=fatigue_tracker
-   DB_PASS=fatigue123
+   DB_PASS=your_password
    DB_SERVICE=XEPDB1
    ```
 
