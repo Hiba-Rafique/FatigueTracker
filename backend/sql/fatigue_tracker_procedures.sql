@@ -89,3 +89,65 @@ BEGIN
 
 END;
 /
+-- ============================================================
+-- ZAINA'S PROCEDURES
+-- ============================================================
+
+-- ── Registration Procedure ───────────────────────────────────
+-- Checks EMAIL_WHITELIST to determine student type (14C/GENERAL)
+-- Inserts into USERS, STUDENT, STUDENT_METRICS atomically
+-- Called by FastAPI /auth/register endpoint
+-- ============================================================
+CREATE OR REPLACE PROCEDURE register_student(
+    p_name          IN VARCHAR2,
+    p_email         IN VARCHAR2,
+    p_password_hash IN VARCHAR2,
+    p_user_id       OUT NUMBER
+) AS
+    v_user_id      NUMBER;
+    v_student_type VARCHAR2(20) := 'GENERAL';
+    v_whitelist    NUMBER := 0;
+BEGIN
+    SELECT COUNT(*) INTO v_whitelist
+    FROM EMAIL_WHITELIST
+    WHERE LOWER(email) = LOWER(p_email) AND is_used = 0;
+
+    IF v_whitelist > 0 THEN
+        v_student_type := '14C';
+    END IF;
+
+    INSERT INTO USERS (user_id, name, email, password_hash, role)
+    VALUES (SEQ_USER_ID.NEXTVAL, p_name, LOWER(p_email), p_password_hash, 'STUDENT')
+    RETURNING user_id INTO v_user_id;
+
+    INSERT INTO STUDENT (student_id, student_type, counselor_requested)
+    VALUES (v_user_id, v_student_type, 0);
+
+    INSERT INTO STUDENT_METRICS (
+        metric_id, student_id, bri_score, stress_avg,
+        workload_score, activity_score, consecutive_high_days,
+        log_streak, last_log_date, trend_label, recommendation_status
+    )
+    VALUES (
+        SEQ_METRIC_ID.NEXTVAL, v_user_id, 0, 0,
+        0, 0, 0, 0, NULL, 'STABLE', 'LOCKED'
+    );
+
+    IF v_student_type = '14C' THEN
+        UPDATE EMAIL_WHITELIST
+        SET is_used = 1, student_id = v_user_id
+        WHERE LOWER(email) = LOWER(p_email);
+    END IF;
+
+    p_user_id := v_user_id;
+    COMMIT;
+
+EXCEPTION
+    WHEN DUP_VAL_ON_INDEX THEN
+        ROLLBACK;
+        RAISE_APPLICATION_ERROR(-20001, 'Email already registered.');
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/

@@ -616,3 +616,4 @@ ORDER BY 1;
 -- DDL COMPLETE
 -- Next file to run: fatigue_tracker_triggers.sql
 -- ============================================================
+
