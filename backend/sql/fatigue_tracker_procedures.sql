@@ -71,21 +71,12 @@ BEGIN
         END;
     END IF;
 
-    -- 5. Flip old ACTIVE -> INACTIVE first
-    UPDATE COUNSELOR_STUDENT 
-    SET status = 'INACTIVE' 
-    WHERE student_id = p_student_id AND status = 'ACTIVE';
+    -- 5. Flip old ACTIVE -> INACTIVE is now handled by T7 trigger
+    -- Insert NOTIFICATION_LOG is now handled by T7 trigger
 
     -- 4. INSERT new ACTIVE row
     INSERT INTO COUNSELOR_STUDENT (student_id, counselor_id, status, assigned_by)
     VALUES (p_student_id, v_counselor_id, 'ACTIVE', 'SYSTEM');
-
-    -- Insert notification log
-    INSERT INTO NOTIFICATION_LOG (user_id, message, type)
-    VALUES (p_student_id, 'A new counselor has been assigned to you.', 'ASSIGNMENT');
-    
-    INSERT INTO NOTIFICATION_LOG (user_id, message, type)
-    VALUES (v_counselor_id, 'A new student has been assigned to you: ' || p_student_id, 'ASSIGNMENT');
 
 END;
 /
@@ -151,3 +142,4 @@ EXCEPTION
         RAISE;
 END;
 /
+
