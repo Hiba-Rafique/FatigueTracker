@@ -114,3 +114,48 @@ BEGIN
 
 END;
 /
+
+-- 5. Cross-test T1-T4 and End-to-End Alert Chain
+DECLARE
+    v_test_student_id NUMBER;
+    v_bri NUMBER;
+    v_alert_count NUMBER;
+    v_notif_count NUMBER;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('--- Testing T1-T4 and End-to-End Alert Chain ---');
+    
+    -- Pick a student to test
+    SELECT MIN(student_id) INTO v_test_student_id FROM STUDENT WHERE student_type = 'GENERAL';
+    
+    DBMS_OUTPUT.PUT_LINE('Test Student ID: ' || v_test_student_id);
+
+    -- Insert 7 days of high stress to hit critical
+    FOR i IN 1..7 LOOP
+        INSERT INTO STRESS_LOG (student_id, stress_level, is_primary, log_date)
+        VALUES (v_test_student_id, 9, 1, TRUNC(SYSDATE) - (7 - i));
+    END LOOP;
+    COMMIT;
+    
+    -- Insert some tasks
+    INSERT INTO TASK_LOG (student_id, title, deadline, effort_hours, status, priority_weight)
+    VALUES (v_test_student_id, 'Final Project', TRUNC(SYSDATE) + 1, 20, 'PENDING', 3);
+    COMMIT;
+    
+    -- Insert activity (lowers fatigue)
+    INSERT INTO ACTIVITY_LOG (student_id, activity_name, energy_cost, log_date)
+    VALUES (v_test_student_id, 'Run', 4, TRUNC(SYSDATE));
+    COMMIT;
+    
+    -- Verify BRI
+    SELECT bri_score INTO v_bri FROM STUDENT_METRICS WHERE student_id = v_test_student_id;
+    DBMS_OUTPUT.PUT_LINE('Calculated BRI Score after T1, T2, T4: ' || v_bri);
+
+    -- If BRI >= 85 (Critical), an alert should exist and counselor assigned
+    SELECT COUNT(*) INTO v_alert_count FROM ALERT WHERE student_id = v_test_student_id AND alert_level = 'CRITICAL' AND status = 'OPEN';
+    DBMS_OUTPUT.PUT_LINE('Critical Alerts: ' || v_alert_count);
+
+    SELECT COUNT(*) INTO v_notif_count FROM NOTIFICATION_LOG WHERE user_id = v_test_student_id AND type = 'ASSIGNMENT';
+    DBMS_OUTPUT.PUT_LINE('Notifications for Assignment: ' || v_notif_count);
+
+END;
+/

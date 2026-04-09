@@ -417,3 +417,79 @@ COMPOUND TRIGGER
 
 END trg_activity_log_insert;
 /
+
+-- ── T7: trg_counselor_student_insert ──────────────────────────
+-- Fires: AFTER INSERT on COUNSELOR_STUDENT
+-- Does: flips previous ACTIVE row to INACTIVE; INSERT NOTIFICATION_LOG confirmations
+-- ============================================================
+CREATE OR REPLACE TRIGGER trg_counselor_student_insert
+FOR INSERT ON COUNSELOR_STUDENT
+COMPOUND TRIGGER
+    -- using a COMPOUND TRIGGER here so Oracle doesn't throw that annoying "mutating table" error!
+    -- basically we can't UPDATE the same table we are INSERTING into at the exact same time.
+    
+    -- structure to save the details of the new row we just inserted
+    TYPE t_assignment IS RECORD (
+        student_id NUMBER,
+        counselor_id NUMBER,
+        assignment_id NUMBER
+    );
+    -- list to hold multiple assignment records just in case
+    TYPE t_assignments_tab IS TABLE OF t_assignment INDEX BY PLS_INTEGER;
+    v_new_assignments t_assignments_tab;
+    v_index PLS_INTEGER := 0;
+
+    -- Phase 1: Catch everything right when the INSERT happens
+    AFTER EACH ROW IS
+    BEGIN
+        v_index := v_index + 1;
+        -- save the exact data into memory for later
+        v_new_assignments(v_index).student_id := :NEW.student_id;
+        v_new_assignments(v_index).counselor_id := :NEW.counselor_id;
+        v_new_assignments(v_index).assignment_id := :NEW.assignment_id;
+    END AFTER EACH ROW;
+
+    -- Phase 2: Do the actual updating when the database gives the green light
+    AFTER STATEMENT IS
+    BEGIN
+        -- loop through whoever we caught earlier
+        FOR i IN 1 .. v_new_assignments.COUNT LOOP
+            
+            -- since the insert is totally finished, it's finally safe to update the table
+            -- deactivate the old counselor so they don't have overlapping actives
+            UPDATE COUNSELOR_STUDENT
+            SET status = 'INACTIVE'
+            WHERE student_id = v_new_assignments(i).student_id
+            AND status = 'ACTIVE'
+            -- make super sure we don't accidentally deactivate the one we just made!
+            AND assignment_id != v_new_assignments(i).assignment_id;
+
+            -- send a nice welcome notification to the student
+            INSERT INTO NOTIFICATION_LOG (user_id, message, type)
+            VALUES (v_new_assignments(i).student_id, 'A new counselor has been assigned to you.', 'ASSIGNMENT');
+
+            -- tell the counselor they got someone new
+            INSERT INTO NOTIFICATION_LOG (user_id, message, type)
+            VALUES (v_new_assignments(i).counselor_id, 'A new student has been assigned to you: ' || v_new_assignments(i).student_id, 'ASSIGNMENT');
+        END LOOP;
+    EXCEPTION 
+        -- just catch any weird crashes so it doesn't break the whole insert
+        WHEN OTHERS THEN NULL;
+    END AFTER STATEMENT;
+END trg_counselor_student_insert;
+/
+
+-- ── T8: trg_student_counselor_req ────────────────────────────
+-- Fires: AFTER UPDATE OF counselor_requested ON STUDENT
+-- Does: call Counselor Assignment Procedure
+-- ============================================================
+CREATE OR REPLACE TRIGGER trg_student_counselor_req
+AFTER UPDATE OF counselor_requested ON STUDENT
+FOR EACH ROW
+-- only jump into action if they explicitly hit "Request Counselor" (0 going to 1)
+WHEN (NEW.counselor_requested = 1 AND OLD.counselor_requested = 0)
+BEGIN
+    -- just passing the hard work (checking if someone's full) over to the main procedure
+    assign_counselor(:NEW.student_id);
+END;
+/
