@@ -418,6 +418,37 @@ COMPOUND TRIGGER
 END trg_activity_log_insert;
 /
 
+-- ============================================================
+-- ZAINA: Recommendation Unlock Trigger
+-- Fires: AFTER UPDATE OF recommendation_status ON STUDENT_METRICS
+-- Only when status flips to UNLOCKED
+-- Calls generate_recommendations and stamps unlocked_at
+-- on all pending recommendations for this student
+-- ============================================================
+CREATE OR REPLACE TRIGGER trg_recommendation_unlock
+AFTER UPDATE OF recommendation_status ON STUDENT_METRICS
+DECLARE
+    v_student_id NUMBER;
+BEGIN
+    -- Get the student whose status changed
+    SELECT student_id
+    INTO v_student_id
+    FROM STUDENT_METRICS
+    WHERE recommendation_status = 'UNLOCKED'
+    AND ROWNUM = 1;
+
+    -- Call your procedure (safe now)
+    generate_recommendations(v_student_id);
+
+    -- Stamp unlocked_at
+    UPDATE RECOMMENDATION
+    SET unlocked_at = CURRENT_TIMESTAMP
+    WHERE student_id = v_student_id
+    AND unlocked_at IS NULL;
+
+END;
+/
+
 -- ── T7: trg_counselor_student_insert ──────────────────────────
 -- Fires: AFTER INSERT on COUNSELOR_STUDENT
 -- Does: flips previous ACTIVE row to INACTIVE; INSERT NOTIFICATION_LOG confirmations
@@ -492,4 +523,4 @@ BEGIN
     -- just passing the hard work (checking if someone's full) over to the main procedure
     assign_counselor(:NEW.student_id);
 END;
-/
+/

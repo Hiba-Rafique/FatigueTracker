@@ -142,4 +142,232 @@ EXCEPTION
         RAISE;
 END;
 /
-
+
+-- ============================================================
+-- ZAINA: Login Authentication Procedure
+-- Called by POST /auth/login
+-- Returns user_id, role, name for JWT generation
+-- Returns -1 if credentials invalid
+-- ============================================================
+CREATE OR REPLACE PROCEDURE login_user(
+    p_email      IN  VARCHAR2,
+    p_password   IN  VARCHAR2,
+    p_user_id    OUT NUMBER,
+    p_role       OUT VARCHAR2,
+    p_name       OUT VARCHAR2
+) AS
+BEGIN
+    SELECT user_id, role, name
+    INTO   p_user_id, p_role, p_name
+    FROM   USERS
+    WHERE  LOWER(email)   = LOWER(p_email)
+    AND    password_hash  = p_password
+    AND    is_active      = 1;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        p_user_id := -1;
+        p_role    := NULL;
+        p_name    := NULL;
+END;
+/
+
+-- ============================================================
+-- ZAINA: Admin SYSTEM_CONFIG Update Procedure
+-- Called by PUT /admin/config
+-- Updates all threshold and config values in one go
+-- ============================================================
+CREATE OR REPLACE PROCEDURE update_system_config(
+    p_max_caseload        IN NUMBER,
+    p_bri_watch           IN NUMBER,
+    p_bri_warning         IN NUMBER,
+    p_bri_critical        IN NUMBER,
+    p_unlock_days         IN NUMBER,
+    p_allowed_misses      IN NUMBER,
+    p_pattern_window_days IN NUMBER
+) AS
+BEGIN
+    -- Validate order before updating
+    IF p_bri_watch >= p_bri_warning OR p_bri_warning >= p_bri_critical THEN
+        RAISE_APPLICATION_ERROR(-20002,
+            'Invalid thresholds: watch < warning < critical required.');
+    END IF;
+
+    UPDATE SYSTEM_CONFIG
+    SET    max_caseload        = p_max_caseload,
+           bri_watch           = p_bri_watch,
+           bri_warning         = p_bri_warning,
+           bri_critical        = p_bri_critical,
+           unlock_days         = p_unlock_days,
+           allowed_misses      = p_allowed_misses,
+           pattern_window_days = p_pattern_window_days
+    WHERE  ROWNUM = 1;
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+
+-- ============================================================
+-- ZAINA: Adaptive Recommendation Engine Procedure
+-- Called by unlock trigger when recommendation_status = UNLOCKED
+-- Rule-based: evaluates current STUDENT_METRICS state
+-- Inserts recommendations only if no active duplicate exists
+-- ============================================================
+CREATE OR REPLACE PROCEDURE generate_recommendations(
+    p_student_id IN NUMBER
+) AS
+    v_bri_score   NUMBER;
+    v_stress_avg  NUMBER;
+    v_workload    NUMBER;
+    v_activity    NUMBER;
+    v_trend       VARCHAR2(20);
+    v_rec_status  VARCHAR2(10);
+    v_dup_count   NUMBER;
+    v_urgent_tasks NUMBER;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('→ generate_recommendations called with student_id=' || p_student_id);
+    
+    -- Read current student state
+    SELECT bri_score, stress_avg, workload_score,
+           activity_score, trend_label, recommendation_status
+    INTO   v_bri_score, v_stress_avg, v_workload,
+           v_activity, v_trend, v_rec_status
+    FROM   STUDENT_METRICS
+    WHERE  student_id = p_student_id;
+    
+    DBMS_OUTPUT.PUT_LINE('  BRI=' || v_bri_score || ', stress_avg=' || v_stress_avg || ', trend=' || v_trend || ', rec_status=' || v_rec_status);
+
+    -- Only generate if unlocked
+    IF v_rec_status != 'UNLOCKED' THEN
+        DBMS_OUTPUT.PUT_LINE('  ✗ Status is ' || v_rec_status || ', not UNLOCKED. Returning.');
+        RETURN;
+    END IF;
+    
+    DBMS_OUTPUT.PUT_LINE('  ✓ Status is UNLOCKED. Checking rules...');
+
+    -- Count tasks due within 48 hours
+    SELECT COUNT(*) INTO v_urgent_tasks
+    FROM   TASK_LOG
+    WHERE  student_id   = p_student_id
+    AND    status       = 'PENDING'
+    AND    deadline     <= TRUNC(SYSDATE) + 2
+    AND    deadline     IS NOT NULL;
+    
+    DBMS_OUTPUT.PUT_LINE('  Urgent tasks: ' || v_urgent_tasks);
+
+    -- Rule 1: CONTACT_COUNSELOR
+    IF v_stress_avg > 7 OR v_trend = 'DETERIORATING' THEN
+        DBMS_OUTPUT.PUT_LINE('  Rule 1 (CONTACT_COUNSELOR): PASS');
+        SELECT COUNT(*) INTO v_dup_count
+        FROM   RECOMMENDATION
+        WHERE  student_id = p_student_id
+        AND    type       = 'CONTACT_COUNSELOR'
+        AND    is_active  = 1;
+        
+        IF v_dup_count = 0 THEN
+            INSERT INTO RECOMMENDATION
+                (recommendation_id, student_id, type, message,
+                 generated_by, is_active)
+            VALUES
+                (SEQ_RECOMMENDATION_ID.NEXTVAL, p_student_id,
+                 'CONTACT_COUNSELOR',
+                 'Your stress levels have been consistently high. Consider reaching out to your assigned counselor for support.',
+                 'SYSTEM', 1);
+            DBMS_OUTPUT.PUT_LINE('    → Inserted CONTACT_COUNSELOR');
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('    → Duplicate CONTACT_COUNSELOR exists, skipped');
+        END IF;
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('  Rule 1 (CONTACT_COUNSELOR): FAIL (stress_avg=' || v_stress_avg || ', trend=' || v_trend || ')');
+    END IF;
+
+    -- Rule 2: DEFER_TASK
+    IF v_urgent_tasks >= 2 AND v_stress_avg > 6 THEN
+        DBMS_OUTPUT.PUT_LINE('  Rule 2 (DEFER_TASK): PASS');
+        SELECT COUNT(*) INTO v_dup_count
+        FROM   RECOMMENDATION
+        WHERE  student_id = p_student_id
+        AND    type       = 'DEFER_TASK'
+        AND    is_active  = 1;
+
+        IF v_dup_count = 0 THEN
+            INSERT INTO RECOMMENDATION
+                (recommendation_id, student_id, type, message,
+                 generated_by, is_active)
+            VALUES
+                (SEQ_RECOMMENDATION_ID.NEXTVAL, p_student_id,
+                 'DEFER_TASK',
+                 'You have multiple urgent deadlines while under high stress. Consider deferring any non-critical tasks to reduce immediate workload.',
+                 'SYSTEM', 1);
+            DBMS_OUTPUT.PUT_LINE('    → Inserted DEFER_TASK');
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('    → Duplicate DEFER_TASK exists, skipped');
+        END IF;
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('  Rule 2 (DEFER_TASK): FAIL (urgent_tasks=' || v_urgent_tasks || ', stress_avg=' || v_stress_avg || ')');
+    END IF;
+
+    -- Rule 3: REST
+    IF v_bri_score > 60 OR v_trend = 'VOLATILE' THEN
+        DBMS_OUTPUT.PUT_LINE('  Rule 3 (REST): PASS');
+        SELECT COUNT(*) INTO v_dup_count
+        FROM   RECOMMENDATION
+        WHERE  student_id = p_student_id
+        AND    type       = 'REST'
+        AND    is_active  = 1;
+
+        IF v_dup_count = 0 THEN
+            INSERT INTO RECOMMENDATION
+                (recommendation_id, student_id, type, message,
+                 generated_by, is_active)
+            VALUES
+                (SEQ_RECOMMENDATION_ID.NEXTVAL, p_student_id,
+                 'REST',
+                 'Your fatigue index is elevated. Schedule at least one full rest period this week — no academic work, no extracurriculars.',
+                 'SYSTEM', 1);
+            DBMS_OUTPUT.PUT_LINE('    → Inserted REST');
+        ELSE
+            DBMS_OUTPUT.PUT_LINE('    → Duplicate REST exists, skipped');
+        END IF;
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('  Rule 3 (REST): FAIL (bri_score=' || v_bri_score || ', trend=' || v_trend || ')');
+    END IF;
+
+    -- Rule 4: RESOURCE (always insert once when unlocked)
+    DBMS_OUTPUT.PUT_LINE('  Rule 4 (RESOURCE): Always checking...');
+    SELECT COUNT(*) INTO v_dup_count
+    FROM   RECOMMENDATION
+    WHERE  student_id = p_student_id
+    AND    type       = 'RESOURCE'
+    AND    is_active  = 1;
+
+    IF v_dup_count = 0 THEN
+        INSERT INTO RECOMMENDATION
+            (recommendation_id, student_id, type, message,
+             generated_by, is_active)
+        VALUES
+            (SEQ_RECOMMENDATION_ID.NEXTVAL, p_student_id,
+             'RESOURCE',
+             'Access NUST student wellness resources at wellness.nust.edu.pk — includes guided relaxation, academic counseling, and peer support groups.',
+             'SYSTEM', 1);
+        DBMS_OUTPUT.PUT_LINE('    → Inserted RESOURCE');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('    → Duplicate RESOURCE exists, skipped');
+    END IF;
+
+    
+    DBMS_OUTPUT.PUT_LINE('✓ generate_recommendations completed');
+
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('✗ ERROR: ' || SQLCODE || ' ' || SQLERRM);
+        
+        NULL;
+END;
+/
+
