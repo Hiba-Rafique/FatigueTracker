@@ -257,3 +257,22 @@ SET recommendation_status = 'UNLOCKED'
 WHERE student_id = 8;
 
 COMMIT;
+
+-- Workload should drop back down
+SELECT student_id, workload_score, bri_score
+FROM STUDENT_METRICS WHERE student_id = 5;
+
+SELECT title, status 
+FROM TASK_LOG 
+WHERE student_id = 5;
+
+SET SERVEROUTPUT ON;
+
+UPDATE TASK_LOG 
+SET status = 'COMPLETED'
+WHERE student_id = 5;
+
+SELECT workload_score 
+FROM STUDENT_METRICS 
+WHERE student_id = 5;
+

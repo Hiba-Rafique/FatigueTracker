@@ -30,42 +30,51 @@ Once the user is created, connect to the database using the `fatigue_tracker` cr
 
 The backend is located in the `backend/` directory.
 
-### Configuration
-1. Navigate to the `backend/` directory.
-2. Initialize your configuration by copying the example environment file:
-   ```cmd
-   copy .env.example .env
-   ```
-3. Update your `.env` with the following credentials (pre-configured for your project setup):
-   ```env
-   DB_USER=fatigue_tracker
-   DB_PASS=your_password
-   DB_SERVICE=XEPDB1
-   ```
-
 ### Installation
 1. Activate the virtual environment:
    ```cmd
    cd backend
    .\venv\Scripts\activate
    ```
-2. Install dependencies:
+2. Install pip dependencies:
    ```cmd
    pip install -r requirements.txt
    ```
+3. Install Oracle packages:
+   ```cmd
+   pip install oracledb
+   ```
+   *(Note: The thin driver is the default. If you need thick mode, you must download the Oracle Instant Client and configure your system PATH. For most operations, the thin driver is sufficient.)*
+
+### Configuration
+1. Navigate to the `backend/` directory.
+2. Initialize your configuration by copying the example environment file:
+   ```cmd
+   copy .env.example .env
+   ```
+3. Update your `.env` with the following credentials to set up your DSN properly:
+   ```env
+   DB_USER=fatigue_tracker
+   DB_PASS=your_password
+   DB_HOST=localhost
+   DB_PORT=1521
+   DB_SERVICE=XEPDB1
+   ```
+   *(The database path is typically formulated as DSN = `DB_HOST:DB_PORT/DB_SERVICE`)*
 
 ### Check DB Connection
 Verify that the backend is communicating with Oracle XE:
 ```cmd
-python -m app.database
+python -m app.db.database
 ```
 **Expected Output:** `Connected successfully to Oracle XE!`
 
 ### Run Server
+Run the FastAPI application via `uvicorn`:
 ```cmd
-python -m uvicorn app.main:app --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-The API will be available at [http://localhost:8000](http://localhost:8000).
+The API will be available at [http://localhost:8000](http://localhost:8000) and interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).
 
 ## 3. VS Code Developer Extension
 To manage the database within VS Code:

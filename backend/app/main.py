@@ -1,9 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
 from dotenv import load_dotenv
-from app.database import test_connection
+import oracledb
+
+from app.routers import health, api
 
 load_dotenv()
 
@@ -18,17 +21,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Centralized error handler for Oracle database errors
+@app.exception_handler(oracledb.Error)
+async def oracle_exception_handler(request: Request, exc: oracledb.Error):
+    error_obj, = exc.args
+    status_code = 500
+    
+    # 1: Unique constraint, 1400: Cannot insert null, 2290: Check constraint, 2291: FK constraint, 2292: Child record found
+    if hasattr(error_obj, 'code') and error_obj.code in (1, 1400, 2290, 2291, 2292):
+        status_code = 400
+        
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "detail": "Database error", 
+            "error_code": getattr(error_obj, 'code', 'Unknown'), 
+            "error_message": getattr(error_obj, 'message', str(exc))
+        }
+    )
+
+app.include_router(health.router)
+app.include_router(api.router, prefix="/api")
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Smart Student Mental Fatigue Tracker API!"}
-
-@app.get("/health")
-def health_check():
-    is_connected = test_connection()
-    return {
-        "status": "online" if is_connected else "offline",
-        "database": "connected" if is_connected else "disconnected"
-    }
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
