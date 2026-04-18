@@ -149,7 +149,7 @@ END;
 -- Returns user_id, role, name for JWT generation
 -- Returns -1 if credentials invalid
 -- ============================================================
-CREATE OR REPLACE PROCEDURE login_user(
+CREATE OR REPLACE PROCEDURE auth_login(
     p_email      IN  VARCHAR2,
     p_password   IN  VARCHAR2,
     p_user_id    OUT NUMBER,
@@ -163,7 +163,7 @@ BEGIN
     WHERE  LOWER(email)   = LOWER(p_email)
     AND    password_hash  = p_password
     AND    is_active      = 1;
-
+ 
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
         p_user_id := -1;
@@ -370,4 +370,5 @@ EXCEPTION
         NULL;
 END;
 /
+
 

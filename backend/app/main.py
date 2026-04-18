@@ -1,12 +1,14 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from app.routers import health, api, auth, student, admin
+
 import uvicorn
 import os
 from dotenv import load_dotenv
 import oracledb
 
-from app.routers import health, api
+
 
 load_dotenv()
 
@@ -42,6 +44,9 @@ async def oracle_exception_handler(request: Request, exc: oracledb.Error):
 
 app.include_router(health.router)
 app.include_router(api.router, prefix="/api")
+app.include_router(auth.router)
+app.include_router(student.router, prefix="/api")
+app.include_router(admin.router,   prefix="/api")
 
 @app.get("/")
 def read_root():
