@@ -230,3 +230,29 @@ def get_benchmarking(current_user: dict = Depends(require_student)):
     finally:
         cursor.close()
         conn.close()
+
+
+# ── GET /student/notifications ───────────────────────────────
+@router.get("/notifications")
+def get_notifications(current_user: dict = Depends(require_student)):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT notification_id, type, message, is_read, sent_at
+            FROM NOTIFICATION_LOG
+            WHERE user_id = :1
+            ORDER BY sent_at DESC
+        """, [current_user["user_id"]])
+        
+        cols = ["notification_id", "type", "message", "is_read", "sent_at"]
+        notifications = []
+        for r in cursor.fetchall():
+            d = dict(zip(cols, r))
+            d["sent_at"] = str(d["sent_at"]) if d["sent_at"] else None
+            notifications.append(d)
+            
+        return {"notifications": notifications}
+    finally:
+        cursor.close()
+        conn.close()

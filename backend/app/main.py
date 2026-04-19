@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import health, api, auth, student, admin
+from app.routers import health, api, auth, student, admin, counselor, faculty
 
 import uvicorn
 import os
@@ -47,6 +47,8 @@ app.include_router(api.router, prefix="/api")
 app.include_router(auth.router)
 app.include_router(student.router, prefix="/api")
 app.include_router(admin.router,   prefix="/api")
+app.include_router(counselor.router, prefix="/api")
+app.include_router(faculty.router, prefix="/api")
 
 @app.get("/")
 def read_root():

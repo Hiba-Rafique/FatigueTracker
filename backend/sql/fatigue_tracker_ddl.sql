@@ -617,3 +617,14 @@ ORDER BY 1;
 -- Next file to run: fatigue_tracker_triggers.sql
 -- ============================================================
 
+
+SELECT s.student_id, u.name, u.email,
+       sm.bri_score, sm.trend_label,
+       (SELECT COUNT(*) FROM ALERT a 
+        WHERE a.student_id = s.student_id AND a.status = 'OPEN') as open_alerts
+FROM COUNSELOR_STUDENT cs
+JOIN STUDENT s ON cs.student_id = s.student_id
+JOIN USERS u ON s.student_id = u.user_id
+LEFT JOIN STUDENT_METRICS sm ON s.student_id = sm.student_id
+WHERE cs.counselor_id = 3        -- replace 3 with your actual counselor's user_id
+AND cs.status = 'ACTIVE';
