@@ -1,26 +1,77 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Base & Surfaces - VIVID VIOLET / LAVENDER */
+  --bg-base: #D6C9F5;
+  --bg-surface: #FFFFFF;
+  --bg-sidebar: #C4B3EF;
+  --bg-topbar: #FFFFFF;
+  
+  /* Borders - VIOLET undertones */
+  --border-violet: #B09EE0;
+  --border-nav: #C4B3EF;
+  --border-pill-critical: #E11D48;
+  --border-pill-stable: #6EE7B7;
+  
+  /* Text - DEEP VIOLET tones */
+  --text-primary: #1E0E4E;
+  --text-secondary: #6D28D9;
+  --text-muted: #7C3AED; /* vivid purple labels */
+  
+  /* Accent - VIVID VIOLET */
+  --violet-vivid: #5B21B6;
+  --violet-hover: #4C1D95;
+  --violet-soft: rgba(91, 33, 182, 0.12);
+  
+  /* Progress Bars */
+  --track-violet: #EDE4FA;
+
+  /* Semantic Tints (Corrected for Lavender Context) */
+  --rose: #E11D48;
+  --rose-bg: #FDE8EE;
+  --rose-text: #9B1239;
+  
+  --emerald: #059669;
+  --emerald-bg: #D1FAE5;
+  --emerald-text: #065F46;
+  
+  --amber: #D97706;
+  --amber-bg: #FFFBEB;
+
+  /* Global Shapes */
+  --radius-card: 20px;
+  --radius-inner: 12px;
+  --radius-pill: 999px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  text-transform: none !important;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.015em;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  border: 1.5px solid transparent;
 }
