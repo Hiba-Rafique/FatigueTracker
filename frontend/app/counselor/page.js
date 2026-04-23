@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import styles from '../page.module.css';
+import styles from './page.module.css';
 
 // Violet Icons
 const IconHome = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
@@ -21,7 +21,7 @@ export default function CounselorDashboard() {
   const [recType, setRecType] = useState("REST");
   const prevAlertCount = useRef(0);
 
-  const AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJyb2xlIjoiQ09VTlNFTE9SIiwiZXhwIjoxNzc2NzkwOTM4fQ._JdbbPJ_qaQa33fgMzc5JrLgYQTDosHYglEj4T-0wh0";
+  const AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJyb2xlIjoiQ09VTlNFTE9SIiwiZXhwIjoxNzc2ODc4NTgzfQ.Pu396PODt3YPiaUvruO-sF4bIatsEaTlPPUZGW2jJME";
 
   const fetchDetails = async (sid) => {
     try {

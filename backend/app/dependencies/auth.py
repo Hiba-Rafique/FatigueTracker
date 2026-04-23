@@ -1,13 +1,10 @@
 import os
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, Request, status
 
 SECRET_KEY = os.getenv("SECRET_KEY", "fatigue_tracker_secret_key_2026")
 ALGORITHM  = os.getenv("ALGORITHM",  "HS256")
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 def create_token(data: dict) -> str:
@@ -17,13 +14,19 @@ def create_token(data: dict) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
+def get_current_user(request: Request) -> dict:
     """
-    Decode JWT and return payload.
-    Raises 401 if token is missing, expired, or tampered with.
+    Read JWT from the httpOnly cookie set at login and decode it.
+    Raises 401 if the cookie is missing, expired, or tampered with.
     Usage:  current_user: dict = Depends(get_current_user)
     Payload contains: { "user_id": int, "role": str, "exp": int }
     """
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
@@ -33,7 +36,6 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token: missing user_id or role",
-                headers={"WWW-Authenticate": "Bearer"},
             )
         return payload
 
@@ -41,14 +43,10 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
         )
 
 
 # ── Role guard helpers ───────────────────────────────────────
-# Use these as dependencies on role-specific endpoints.
-# Example:  current_user: dict = Depends(require_student)
-
 def _require_role(required_role: str):
     def guard(current_user: dict = Depends(get_current_user)):
         if current_user["role"] != required_role:

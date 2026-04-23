@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './page.module.css';
 
-const AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo0LCJyb2xlIjoiRkFDVUxUWSIsImV4cCI6MTc3Njc4Njc1Nn0.5hxdd0U7FyJInfNAWmYEQPTHoCWYXvZn7LbLoVxXvJg";
+const AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo0LCJyb2xlIjoiRkFDVUxUWSIsImV4cCI6MTc3Njg3ODU4M30.3oGl4ttWpo3PlJH1MprWeOsIiAbFLYlFfQbgem6NpCk";
 
 const IconUsers = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

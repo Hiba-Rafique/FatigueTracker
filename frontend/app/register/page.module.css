@@ -1,0 +1,387 @@
+/* ── Root layout ─────────────────────────────────────────── */
+.root {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .root { grid-template-columns: 1fr; }
+  .infoSide { display: none; }
+}
+
+/* ── Form side ───────────────────────────────────────────── */
+.formSide {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 36px 48px 32px;
+  background: var(--bg-base, #faf9f7);
+  border-right: 1px solid var(--border-nav, #ece9f0);
+}
+
+/* ── Wordmark ────────────────────────────────────────────── */
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1523;
+  font-family: 'Open Sans', sans-serif;
+}
+
+.wordmarkDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--violet-vivid, #7C5DE8);
+}
+
+/* ── Form body ───────────────────────────────────────────── */
+.formBody {
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.heading {
+  font-size: 36px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  color: #0f0b1a;
+  margin: 0 0 6px;
+  font-family: 'Outfit', sans-serif;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--text-secondary, #7a6f8a);
+  margin: 0 0 24px;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── Step indicator ──────────────────────────────────────── */
+.stepRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #c2bcd4;
+  font-family: 'Open Sans', sans-serif;
+  transition: color 0.2s;
+}
+
+.stepActive { color: var(--violet-vivid, #7C5DE8); }
+
+.stepCircle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #e5e1ee;
+  color: #9b8abf;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Open Sans', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.stepActive .stepCircle {
+  background: var(--violet-vivid, #7C5DE8);
+  color: #fff;
+}
+
+.stepLine {
+  flex: 1;
+  height: 1px;
+  background: #e5e1ee;
+  margin: 0 10px;
+}
+
+/* ── Form ────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fieldRow {
+  display: flex;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #3d3550;
+  font-family: 'Open Sans', sans-serif;
+}
+
+.input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border-nav, #e5e1ee);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  color: var(--text-primary, #1a1523);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: var(--violet-vivid, #7C5DE8);
+  box-shadow: 0 0 0 3px rgba(124, 93, 232, 0.08);
+}
+
+.input::placeholder { color: var(--text-muted, #c2bcd4); }
+
+.hint {
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+  color: var(--text-muted, #b0a8c4);
+  line-height: 1.4;
+}
+
+/* ── Password ────────────────────────────────────────────── */
+.passWrap { position: relative; }
+.passWrap .input { padding-right: 42px; }
+
+.eyeBtn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted, #b0a8c4);
+  display: flex;
+  align-items: center;
+  padding: 0;
+  transition: color 0.15s;
+}
+.eyeBtn:hover { color: var(--violet-vivid, #7C5DE8); }
+
+/* ── Strength ────────────────────────────────────────────── */
+.strengthRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.strengthTrack {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.strengthSeg {
+  height: 3px;
+  flex: 1;
+  border-radius: 2px;
+  transition: background 0.25s;
+}
+
+.strengthLabel {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Open Sans', sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  min-width: 36px;
+  text-align: right;
+  transition: color 0.25s;
+}
+
+.matchHint {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  color: #059669;
+}
+
+.mismatchHint {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  color: #E11D48;
+}
+
+/* ── Error ───────────────────────────────────────────────── */
+.errorBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #FDE8EE;
+  color: #9B1239;
+  border: 1px solid #FDA4AF;
+  border-radius: 8px;
+  padding: 9px 13px;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  animation: fadeUp 0.2s ease;
+}
+
+/* ── Submit ──────────────────────────────────────────────── */
+.submitBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  background: var(--violet-vivid, #7C5DE8);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Open Sans', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+  margin-top: 4px;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: var(--violet-hover, #6f52d6);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(124, 93, 232, 0.2);
+}
+
+.submitBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Back button ─────────────────────────────────────────── */
+.backBtn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Open Sans', sans-serif;
+  color: var(--text-muted, #b0a8c4);
+  cursor: pointer;
+  padding: 0;
+  align-self: center;
+  transition: color 0.15s;
+  letter-spacing: 0.02em;
+}
+.backBtn:hover { color: var(--violet-vivid, #7C5DE8); }
+
+/* ── Register row ────────────────────────────────────────── */
+.registerRow {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--text-secondary, #7a6f8a);
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.registerLink {
+  color: var(--violet-vivid, #7C5DE8);
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.registerLink:hover { opacity: 0.7; }
+
+/* ── Footer ──────────────────────────────────────────────── */
+.formFooter {
+  font-size: 11px;
+  color: var(--text-muted, #b0a8c4);
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+}
+
+/* ── Success ─────────────────────────────────────────────── */
+.successIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #D1FAE5;
+  border: 1.5px solid #6EE7B7;
+  color: #059669;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+/* ── Info side ───────────────────────────────────────────── */
+.infoSide {
+  background: var(--violet-vivid, #7C5DE8);
+  display: flex;
+  align-items: flex-end;
+  padding: 56px 64px;
+  position: relative;
+  overflow: hidden;
+}
+
+.infoSide::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  right: -100px;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  pointer-events: none;
+}
+
+.infoHeading {
+  font-size: clamp(48px, 6vw, 80px);
+  font-weight: 300;
+  letter-spacing: -0.04em;
+  line-height: 1.0;
+  color: #fff;
+  margin: 0;
+  font-family: 'Outfit', sans-serif;
+  position: relative;
+  z-index: 1;
+  opacity: 0.9;
+}

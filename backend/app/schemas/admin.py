@@ -12,3 +12,13 @@ class ConfigUpdateRequest(BaseModel):
     unlock_days: int
     allowed_misses: int
     pattern_window_days: int
+
+
+class StaffCreateRequest(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    role: str  # COUNSELOR | FACULTY
+    specialization: Optional[str] = None
+    department: Optional[str] = None
+    max_caseload: Optional[int] = 10

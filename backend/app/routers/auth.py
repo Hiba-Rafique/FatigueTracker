@@ -1,5 +1,6 @@
 import oracledb
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
+from fastapi.responses import JSONResponse  # ✅ NEW
 from app.schemas.auth import RegisterRequest, LoginRequest, AuthResponse
 from app.db.database import get_connection
 from app.dependencies.auth import create_token
@@ -14,9 +15,6 @@ def register(data: RegisterRequest):
     try:
         user_id = cursor.var(oracledb.NUMBER)
 
-        # Procedure signature: register_student(p_name, p_email, p_password_hash, p_user_id OUT)
-        # NOTE: The SQL procedure only accepts name, email, password — not role/first_name/etc.
-        # We concatenate first+last name to match p_name. Extend the procedure if you need more fields.
         full_name = f"{data.first_name} {data.last_name}".strip()
 
         cursor.callproc(
@@ -39,18 +37,18 @@ def register(data: RegisterRequest):
         conn.close()
 
 
-@router.post("/login", response_model=AuthResponse)
+# ❗ UPDATED LOGIN ENDPOINT (cookie-based auth)
+@router.post("/login")
 def login(data: LoginRequest):
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        # Use DB_TYPE_VARCHAR (not oracledb.STRING) for OUT string vars
         user_id = cursor.var(oracledb.NUMBER)
         role    = cursor.var(oracledb.DB_TYPE_VARCHAR)
         name    = cursor.var(oracledb.DB_TYPE_VARCHAR)
 
         cursor.callproc(
-            "auth_login",  # renamed - SYS has built-in LOGIN_USER
+            "auth_login",
             [data.email, data.password, user_id, role, name]
         )
 
@@ -64,13 +62,23 @@ def login(data: LoginRequest):
             "role": role.getvalue()
         })
 
-        return {
-            "access_token": token,
-            "token_type":   "bearer",
-            "user_id":      int(uid),
-            "role_id":      role.getvalue(),   # returns e.g. "STUDENT"
-            "username":     name.getvalue()
-        }
+        # ✅ NEW: return response with httpOnly cookie
+        response = JSONResponse(content={
+            "user_id":  int(uid),
+            "role_id":  role.getvalue(),
+            "username": name.getvalue()
+        })
+
+        response.set_cookie(
+            key="access_token",
+            value=token,
+            httponly=True,       # 🔐 JS cannot access
+            secure=False,        # ⚠️ change to True in production (HTTPS)
+            samesite="lax",
+            max_age=60 * 60 * 24 * 7  # 1 week
+        )
+
+        return response
 
     except HTTPException:
         raise
@@ -80,3 +88,10 @@ def login(data: LoginRequest):
     finally:
         cursor.close()
         conn.close()
+
+
+# ✅ NEW: logout endpoint
+@router.post("/logout")
+def logout(response: Response):
+    response.delete_cookie("access_token")
+    return {"message": "Logged out"}

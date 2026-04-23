@@ -1,9 +1,11 @@
-SELECT user_id, email, password_hash, is_active, role FROM USERS where role='STUDENT';
+SELECT user_id, email, password_hash, is_active,  role FROM USERS where role='STUDENT';
 
 
 DESC STRESS_LOG;
 DESC TASK_LOG;
 DESC ACTIVITY_LOG;
+
+select * from TASK_LOG;
 
 SELECT user_id, name,  password_hash,email, role FROM USERS WHERE name = 'System Admin';
 
@@ -100,3 +102,10 @@ END;
 /
 
 SELECT * FROM AUDIT_LOG;
+
+
+select * from student_metrics;
+
+SELECT * FROM Counselor;
+
+select * from users;
