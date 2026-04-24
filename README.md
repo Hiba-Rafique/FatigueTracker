@@ -1,89 +1,72 @@
-# Smart Student Mental Fatigue & Adaptive Workload Tracker
+# 🧠 Smart Student Mental Fatigue & Adaptive Workload Tracker
 
-This project is a comprehensive tracking system for student mental fatigue, featuring an Oracle XE database and a FastAPI backend.
+A high-resolution clinical oversight and student wellness platform built with **Next.js**, **FastAPI**, and **Oracle XE**.
 
-## 1. Database Setup (Oracle XE)
+---
 
-The SQL scripts for database initialization are located in the `backend/sql/` directory.
+## 🚀 Quick Start (Automated Setup)
 
-### A. Create Application User
-Before running the DDL, you must create a dedicated user for the Fatigue Tracker. 
+The system now includes a unified orchestration script that handles database initialization, logic deployment, and data seeding in one command.
 
-1. Open your terminal (Command Prompt or PowerShell).
-2. Navigate to the root folder: `cd c:\Users\hibar\Documents\FatigueTracker`.
-3. Log in as system administrator using **SQL*Plus**:
-   ```cmd
-   sqlplus sys as sysdba
-   ```
-4. Run the user creation script:
-   ```sql
-   @backend/sql/create_user.sql
-   ```
-   *Note: Ensure you include the correct path to the script.*
+### 1. Prerequisites
+- **Oracle XE 21c** installed and running.
+- **Python 3.10+** installed.
+- **Node.js** (for the frontend).
 
-### B. Run the DDL
-Once the user is created, connect to the database using the `fatigue_tracker` credentials and run:
-1. `backend/sql/fatigue_tracker_ddl.sql` (to create tables, sequences, indices, and seed data).
-2. In **SQL*Plus**, you can run: `@backend/sql/fatigue_tracker_ddl.sql`.
-
-## 2. Backend Setup (FastAPI)
-
-The backend is located in the `backend/` directory.
-
-### Installation
-1. Activate the virtual environment:
-   ```cmd
-   cd backend
-   .\venv\Scripts\activate
-   ```
-2. Install pip dependencies:
-   ```cmd
-   pip install -r requirements.txt
-   ```
-3. Install Oracle packages:
-   ```cmd
-   pip install oracledb
-   ```
-   *(Note: The thin driver is the default. If you need thick mode, you must download the Oracle Instant Client and configure your system PATH. For most operations, the thin driver is sufficient.)*
-
-### Configuration
+### 2. Environment Configuration
 1. Navigate to the `backend/` directory.
-2. Initialize your configuration by copying the example environment file:
-   ```cmd
-   copy .env.example .env
-   ```
-3. Update your `.env` with the following credentials to set up your DSN properly:
+2. Create a `.env` file (copy from `.env.example` if available) and ensure your Oracle credentials are correct:
    ```env
    DB_USER=fatigue_tracker
-   DB_PASS=your_password
-   DB_HOST=localhost
-   DB_PORT=1521
-   DB_SERVICE=XEPDB1
+   DB_PASSWORD=fatigue123
+   DB_DSN=localhost:1521/XEPDB1
+   SECRET_KEY=your_secret_key_here
    ```
-   *(The database path is typically formulated as DSN = `DB_HOST:DB_PORT/DB_SERVICE`)*
 
-### Check DB Connection
-Verify that the backend is communicating with Oracle XE:
-```cmd
-python -m app.db.database
+### 3. Initialize & Launch Backend
+Run the following command in the `backend/` directory:
+```powershell
+pip install -r requirements.txt
+python setup_and_run.py
 ```
-**Expected Output:** `Connected successfully to Oracle XE!`
+**This script will automatically:**
+- Create all tables, sequences, and indices.
+- Deploy stored procedures, triggers, and scheduled jobs.
+- Seed the database with high-resolution test personas and historical data.
+- Start the FastAPI server on `http://127.0.0.1:8000`.
 
-### Run Server
-Run the FastAPI application via `uvicorn`:
-```cmd
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+### 4. Launch Frontend
+Open a new terminal in the `frontend/` directory:
+```powershell
+npm install
+npm run dev
 ```
-The API will be available at [http://localhost:8000](http://localhost:8000) and interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).
+Access the application at `http://localhost:3000`.
 
-## 3. VS Code Developer Extension
-To manage the database within VS Code:
-1. Open the **Oracle Explorer** tab.
-2. Click **+** to add a new connection.
-3. Use the following:
-   - **Username**: `fatigue_tracker`
-   - **Password**: `fatigue123`
-   - **Service Name**: `XEPDB1`
-   - **Host**: `localhost`
-   - **Port**: `1521`
-4. This allows you to explore tables and execute SQL directly.
+---
+
+## 🧪 Testing Personas (Seeded Data)
+
+The following accounts are pre-seeded with 5 weeks of historical analytics and active clinical states:
+
+| Role | Email | Password | Features to Test |
+| :--- | :--- | :--- | :--- |
+| **Faculty** | `faculty@nust.edu.pk` | `fatigue123` | Interactive cohort charts, daily drill-downs, critical census tracking. |
+| **Counselor** | `counselor@nust.edu.pk` | `fatigue123` | Student roster, active alerts, stress trend evaluation, interventions. |
+| **Student** | `hiba.rafique@students.nust.edu.pk` | `fatigue123` | Stress/Task logging, peer benchmarking (14C), personalized recommendations. |
+
+---
+
+## 🛡️ Security Features
+- **Bcrypt Hashing**: All passwords are cryptographically hashed using direct `bcrypt` integration (industry standard).
+- **JWT Authentication**: Secure, cookie-based sessions with HttpOnly flags to prevent XSS.
+- **Role-Based Access Control (RBAC)**: Strict separation between Student, Counselor, and Faculty dashboards.
+
+## 📊 Database Architecture
+The system utilizes **Oracle XE** for high-integrity clinical data management:
+- **PL/SQL Engine**: Automated Weekly Pulse generation and Adaptive Recommendation logic.
+- **Triggers**: Real-time alerting for Behavioral Risk Index (BRI) spikes.
+- **Jobs**: Scheduled cohort-wide trend calculations.
+
+---
+*Developed by the Fatigue Tracker Team.*

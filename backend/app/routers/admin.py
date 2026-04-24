@@ -31,7 +31,7 @@ def create_staff_account(data: StaffCreateRequest, current_user: dict = Depends(
             VALUES (SEQ_USER_ID.NEXTVAL, :1, LOWER(:2), :3, :4, 1)
             RETURNING user_id INTO :5
         """, [data.name.strip(), data.email, data.password, role, user_id_var])
-        staff_user_id = int(user_id_var.getvalue())
+        staff_user_id = int(user_id_var.getvalue()[0])
 
         if role == "COUNSELOR":
             max_caseload = data.max_caseload if data.max_caseload and data.max_caseload > 0 else 10

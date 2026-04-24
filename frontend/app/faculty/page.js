@@ -3,7 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import styles from './page.module.css';
 
-const AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo0LCJyb2xlIjoiRkFDVUxUWSIsImV4cCI6MTc3Njg3ODU4M30.3oGl4ttWpo3PlJH1MprWeOsIiAbFLYlFfQbgem6NpCk";
+const API_HOST = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+const BASE = `http://${API_HOST}:8000`;
+const api = (path, opts = {}) =>
+  fetch(`${BASE}${path}`, {
+    ...opts,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+  });
 
 const IconUsers = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -17,28 +24,88 @@ const IconTrendingUp = () => (
   </svg>
 );
 
-const IconCalendar = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-  </svg>
-);
+const IconLogOut = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+
+const IconHeart = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
+
+const FriendlyAdvisorLiner = ({ stress, trend }) => {
+  const { text, color } = getFriendlyLinerData(stress, trend);
+  
+  return (
+    <div className={styles.friendlyLinerContainer}>
+      <div 
+        className={styles.friendlyLinerBox} 
+        style={{ 
+          borderLeftColor: color,
+          animation: `${styles.fadeIn} 0.4s ease-in-out`
+        }}
+      >
+        <span className={styles.eyebrowLabel}>This week's recommendation</span>
+        <div className={styles.linerHeader}>
+          <span className={styles.linerIcon} style={{ color: color }}><IconHeart /></span>
+          <p className={styles.linerText} style={{ color: stress > 6.0 ? color : '#2D2159' }}>{text}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const getFriendlyLinerData = (stress, trend) => {
+  const isIncreasing = trend === 'INCREASING';
+  
+  if (stress > 7.0) {
+    return {
+      text: "The cohort is really struggling right now, even a small deadline extension could make a big difference.",
+      color: "#E11D48"
+    };
+  }
+  if (stress >= 6.0 && isIncreasing) {
+    return {
+      text: "Students are feeling the pressure this week, consider nudging a non-critical deadline forward by a day.",
+      color: "#F43F5E"
+    };
+  }
+  if (stress >= 5.0 && isIncreasing) {
+    return {
+      text: "Stress is slowly climbing, worth checking if multiple deadlines are piling up on the same day.",
+      color: "#7C3AED" 
+    };
+  }
+  if (stress >= 5.0) {
+    return {
+      text: "Stress is moderate but holding steady, maybe go easy on surprise assessments this week.",
+      color: "#7C3AED" 
+    };
+  }
+  return {
+    text: "Your cohort is in great shape this week, a perfect time to push new material.",
+    color: "#7C3AED" 
+  };
+};
 
 export default function FacultyDashboard() {
-  const [stats, setStats] = useState(null);
   const [history, setHistory] = useState([]);
+  const [selectedWeek, setSelectedWeek] = useState(null);
+  const [dailyData, setDailyData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [hoveredWeek, setHoveredWeek] = useState(null);
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+
+  const handleLogout = async () => {
+    try { await api('/auth/logout', { method: 'POST' }); } catch {}
+    window.location.href = '/login';
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const statsRes = await fetch('/api/faculty/stats', { headers: { 'Authorization': AUTH_TOKEN } });
-        const statsData = await statsRes.json();
-        setStats(statsData.latest_stats);
-
-        const historyRes = await fetch('/api/faculty/stats/history', { headers: { 'Authorization': AUTH_TOKEN } });
+        const historyRes = await api('/api/faculty/stats/history');
         const historyData = await historyRes.json();
-        setHistory(historyData.history || []);
+        const rawHistory = historyData.history || [];
+        setHistory(rawHistory);
+        if (rawHistory.length > 0) {
+          const latest = rawHistory[0];
+          setSelectedWeek(latest);
+        }
       } catch (err) {
         console.error("Fetch failed", err);
       } finally {
@@ -48,6 +115,20 @@ export default function FacultyDashboard() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (!selectedWeek) return;
+    const fetchDaily = async () => {
+      try {
+        const res = await api(`/api/faculty/stats/week/${selectedWeek.week_start.split(' ')[0]}`);
+        const data = await res.json();
+        setDailyData(data.daily_breakdown || []);
+      } catch (err) {
+        console.error("Daily fetch failed", err);
+      }
+    };
+    fetchDaily();
+  }, [selectedWeek]);
+
   const getTrendColor = (trend) => {
     switch (trend?.toUpperCase()) {
       case 'INCREASING': return '#E11D48'; 
@@ -56,165 +137,329 @@ export default function FacultyDashboard() {
     }
   };
 
-  if (loading) return <div className={styles.loading}>Initializing Anonymized Stream...</div>;
+  const getRiskStyle = (stress) => {
+    if (stress >= 7) return { label: 'CRITICAL RISK', color: '#9B1239', bg: '#FDE8EE', border: '#E11D48' };
+    if (stress >= 5) return { label: 'ELEVATED LOAD', color: '#92400E', bg: '#FFFBEB', border: '#FCD34D' };
+    return { label: 'STABLE COHORT', color: '#065F46', bg: '#D1FAE5', border: '#6EE7B7' };
+  };
 
-  const IconShield = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-    </svg>
+  if (loading) return (
+    <div className={styles.loadingScreen}>
+      <div className={styles.loader} />
+      <p className={styles.loadingText}>Syncing Anonymized Stream...</p>
+    </div>
   );
+
+  const chartData = dailyData.length > 0 ? dailyData : [];
+  const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
   return (
     <div className={styles.container}>
       <header className={styles.topBar}>
         <div className={styles.brand}>
+          <div className={styles.logo} />
           <span className={styles.appName}>Fatigue Tracker <span className={styles.roleTag}>Faculty</span></span>
         </div>
-        <div className={styles.headerInfo}>
+        <div className={styles.topRight}>
+          <div className={styles.anonymityStatus}>
+            <div className={styles.shieldIcon}><IconShield /></div>
+            SECURE AGGREGATION ENABLED
+          </div>
+          <button className={styles.logoutBtn} onClick={handleLogout} title="Logout">
+            <IconLogOut />
+          </button>
         </div>
       </header>
 
       <main className={styles.main}>
-        <div className={styles.workspace}>
-            <section className={styles.card}>
+        <div className={styles.workspaceWrapper}>
+          <div className={styles.workspace}>
+            
+            {/* 0. Friendly Advisor Liner (Sticky Note style) */}
+            {selectedWeek && (
+              <FriendlyAdvisorLiner 
+                key={selectedWeek.stat_id} 
+                stress={selectedWeek.avg_stress} 
+                trend={selectedWeek.trend_label} 
+              />
+            )}
+
+            {/* 1. History Timeline Carousel */}
+            <div className={styles.timelineSection}>
               <div className={styles.sectionHeader}>
-                <div className={styles.sectionHeading}>Cohort Pulse</div>
-                <span className={styles.anonymizedBadge}>ANONYMIZED</span>
+                <span className={styles.sectionHeading}>Historical Pulse Timeline</span>
+                <span className={styles.metaLabel}>{history.length} weeks of data</span>
               </div>
-              
-              {stats ? (
-                <div className={styles.pulseCentered}>
-                  <div className={styles.pulseMain}>
-                    <div className={styles.statCircle} style={{ borderColor: getTrendColor(stats.trend_label) }}>
-                      <span className={styles.statVal}>{stats.avg_stress?.toFixed(1)}</span>
-                      <span className={styles.statLabel}>Avg Stress</span>
-                    </div>
-                    <div className={styles.pulseContent}>
-                      <div className={styles.trendBadge} style={{ backgroundColor: getTrendColor(stats.trend_label) }}>
-                        {stats.trend_label} DIRECTION
+              <div className={styles.weekScroll}>
+                {history.map((w, i) => (
+                  <div 
+                    key={w.stat_id} 
+                    className={`${styles.weekCard} ${selectedWeek?.stat_id === w.stat_id ? styles.weekCardActive : ''}`}
+                    onClick={() => setSelectedWeek(w)}
+                  >
+                    <span className={styles.weekLabel}>
+                      {i === 0 ? 'CURRENT WEEK' : `WEEK OF ${new Date(w.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                    </span>
+                    <div className={styles.weekMiniStat}>
+                      <span className={styles.miniStress}>{w.avg_stress.toFixed(1)}</span>
+                      <div className={styles.trendIndicator} style={{ background: getTrendColor(w.trend_label) }}>
+                        {w.trend_label === 'INCREASING' ? 'HIGH LOAD' : w.trend_label === 'DECREASING' ? 'RECOVERY' : 'STABLE'}
                       </div>
-                      <p className={styles.pulseDesc}>
-                        Current aggregate cohort fatigue is <strong>{stats.trend_label.toLowerCase()}</strong>. This metric reflects the average physiological and academic signal from {stats.student_count} registered students.
-                      </p>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className={styles.empty}>No cohort data computed for this window.</div>
-              )}
-            </section>
+                ))}
+              </div>
+            </div>
 
-            <section className={styles.card}>
-              <div className={styles.sectionHeading}>Longitudinal Stress Wave</div>
-              <div className={styles.chartWrapper}>
-                {history.length > 0 ? (
-                  <div className={styles.svgContainer}>
+            {selectedWeek ? (
+              <>
+                {/* 2. Main Pulse Card */}
+                <section className={styles.card}>
+                  <div className={styles.cardInternal}>
+                    <div className={styles.pulseGauge}>
+                      <div className={styles.gaugeRing} style={{ borderColor: getTrendColor(selectedWeek.trend_label) }}>
+                        <span className={styles.gaugeVal}>{selectedWeek.avg_stress.toFixed(1)}</span>
+                        <span className={styles.gaugeLabel}>AVG STRESS</span>
+                      </div>
+                    </div>
+                    
+                    <div className={styles.pulseMetrics}>
+                      <div className={styles.metricRow}>
+                        <span className={styles.metricLabel}>Trend Velocity</span>
+                        <div className={styles.trendDescriptor} style={{ color: getTrendColor(selectedWeek.trend_label), borderLeftColor: getTrendColor(selectedWeek.trend_label) }}>
+                          {selectedWeek.trend_label === 'INCREASING' ? 'Aggregating Tension' : selectedWeek.trend_label === 'DECREASING' ? 'Load Dissipating' : 'Stable'}
+                        </div>
+                      </div>
+                      <div className={styles.metricRow}>
+                        <span className={styles.metricLabel}>Active Cohort</span>
+                        <div className={styles.metricValue}>{selectedWeek.student_count} Students</div>
+                      </div>
+                      <div className={styles.metricRow}>
+                        <span className={styles.metricLabel}>Academic Overhead</span>
+                        <div className={styles.metricValue}>{selectedWeek.avg_workload?.toFixed(1) || '0.0'} pts</div>
+                      </div>
+                      <div className={styles.metricRow}>
+                        <span className={styles.metricLabel}>Critical Cases</span>
+                        <div className={styles.metricValue} style={{ 
+                          color: selectedWeek.critical_count > 0 ? '#E11D48' : 'inherit',
+                          fontWeight: selectedWeek.critical_count > 0 ? '800' : 'inherit'
+                        }}>
+                          {selectedWeek.critical_count} Students
+                        </div>
+                      </div>
+                      <div className={styles.metricRow}>
+                        <span className={styles.metricLabel}>Health Score</span>
+                        <div className={styles.statusChip} style={{ 
+                          color: getRiskStyle(selectedWeek.avg_stress).color,
+                          background: getRiskStyle(selectedWeek.avg_stress).bg,
+                          borderColor: getRiskStyle(selectedWeek.avg_stress).border
+                        }}>
+                          {getRiskStyle(selectedWeek.avg_stress).label}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className={styles.cardFooter}>
+                    Cohort-level pulse reflects aggregate academic and kinetic signals from the 14C section.
+                  </p>
+                </section>
+
+                {/* 3. Stress Wave Chart */}
+                <section className={styles.card}>
+                  <div className={styles.sectionHeader}>
+                    <span className={styles.sectionHeading}>Weekly Stress Wave</span>
+                    <span className={styles.metaLabel}>DAILY AVERAGE</span>
+                  </div>
+                  <div className={styles.chartArea}>
                     <svg viewBox="0 0 1000 240" className={styles.lineChart}>
                       <defs>
-                        <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.3" />
+                        <linearGradient id="waveGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.2" />
                           <stop offset="100%" stopColor="#7C3AED" stopOpacity="0" />
                         </linearGradient>
                       </defs>
-                      <path 
-                        d={`M 0 240 ${[...history].reverse().map((h, i) => `L ${(i * (1000/(history.length-1)))} ${240 - (h.avg_stress * 24)}`).join(' ')} L 1000 240 Z`} 
-                        fill="url(#areaGradient)" 
-                      />
-                      <path 
-                        d={`M 0 ${240 - (history[history.length-1]?.avg_stress * 24)} ${[...history].reverse().map((h, i) => `L ${(i * (1000/(history.length-1)))} ${240 - (h.avg_stress * 24)}`).join(' ')}`} 
-                        fill="none" 
-                        stroke="#7C3AED" 
-                        strokeWidth="4" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round"
-                        className={styles.drawPath}
-                      />
-                      {[...history].reverse().map((h, i) => (
-                        <g key={h.stat_id} 
-                           className={styles.dataGroup} 
-                           onMouseEnter={() => setHoveredWeek(h)}
-                           onMouseLeave={() => setHoveredWeek(null)}>
-                          <circle 
-                            cx={i * (1000/(history.length-1))} 
-                            cy={240 - (h.avg_stress * 24)} 
-                            r="6" 
-                            fill={h.avg_stress > 7 ? "#E11D48" : "#fff"}
-                            stroke="#7C3AED"
-                            strokeWidth="3"
-                            style={{ cursor: 'pointer' }}
+                      {chartData.length > 0 && (
+                        <>
+                          <path 
+                            d={`M 0 240 ${chartData.map((h, i) => `L ${i * (1000/(chartData.length-1))} ${240 - (h.avg_stress * 24)}`).join(' ')} L 1000 240 Z`} 
+                            fill="url(#waveGrad)" 
                           />
-                          {h.avg_stress > 7 && (
-                            <circle 
-                              cx={i * (1000/(history.length-1))} 
-                              cy={240 - (h.avg_stress * 24)} 
-                              r="12" 
-                              fill="none"
-                              stroke="#E11D48"
-                              strokeWidth="2"
-                              className={styles.peakGlow}
-                            />
-                          )}
-                        </g>
-                      ))}
+                          <path 
+                            d={`M 0 ${240 - (chartData[0].avg_stress * 24)} ${chartData.map((h, i) => `L ${i * (1000/(chartData.length-1))} ${240 - (h.avg_stress * 24)}`).join(' ')}`} 
+                            fill="none" 
+                            stroke="#7C3AED" 
+                            strokeWidth="4" 
+                            strokeLinecap="round" 
+                            className={styles.drawPath}
+                          />
+                          <line x1="0" y1={240 - (7.0 * 24)} x2="1000" y2={240 - (7.0 * 24)} 
+                                stroke="#E11D48" strokeWidth="2" strokeDasharray="6,4" opacity="0.6" />
+                          {chartData.map((h, i) => {
+                            const x = i * (1000/(chartData.length-1));
+                            const y = 240 - (h.avg_stress * 24);
+                            return (
+                              <circle 
+                                key={`stress-${h.date}`}
+                                cx={x} 
+                                cy={y} 
+                                r="6"
+                                fill="#fff"
+                                stroke="#7C3AED"
+                                strokeWidth="3"
+                                style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                                onMouseEnter={() => setHoveredPoint({
+                                  x, y,
+                                  type: 'stress',
+                                  label: 'Cohort Stress',
+                                  value: h.avg_stress.toFixed(1),
+                                  date: h.date,
+                                  color: '#7C3AED'
+                                })}
+                                onMouseLeave={() => setHoveredPoint(null)}
+                              />
+                            );
+                          })}
+                        </>
+                      )}
                     </svg>
-
-                    {hoveredWeek && (
-                      <div className={styles.floatingTooltip} style={{ left: '50%', transform: 'translateX(-50%)' }}>
-                        <div className={styles.tooltipDate}>{new Date(hoveredWeek.week_start).toLocaleDateString()}</div>
-                        <div className={styles.tooltipVal}>Average Stress: <strong>{hoveredWeek.avg_stress}</strong></div>
-                        <div className={styles.tooltipContext}>Trend: {hoveredWeek.trend_label}</div>
+                    {hoveredPoint && hoveredPoint.type === 'stress' && (
+                      <div 
+                        className={styles.chartTooltip}
+                        style={{ 
+                          left: `${hoveredPoint.x / 10}%`, 
+                          top: `${hoveredPoint.y - 70}px`,
+                          borderLeftColor: hoveredPoint.color
+                        }}
+                      >
+                        <div className={styles.tooltipHeader}>
+                          <span className={styles.tooltipDate}>{new Date(hoveredPoint.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          <span className={styles.tooltipLabel}>{hoveredPoint.label}</span>
+                        </div>
+                        <div className={styles.tooltipValue} style={{ color: hoveredPoint.color }}>
+                          {hoveredPoint.value}
+                        </div>
                       </div>
                     )}
-
-                    <div className={styles.chartLegend}>
-                      {[...history].reverse().map((h, i) => (
-                        <div key={i} className={styles.legendItem}>Week {i+1}</div>
-                      ))}
-                    </div>
                   </div>
-                ) : (
-                  <div className={styles.empty}>Cohort baseline initializing...</div>
-                )}
-                <div className={styles.thresholdLine} style={{ bottom: '70%', '--fill': '#E11D48' }}>
-                  <span className={styles.thresholdText}>Clinical Intervention Threshold (7.0)</span>
+                  <div className={styles.chartLabels}>
+                    {days.map(d => <span key={d}>{d}</span>)}
+                  </div>
+                </section>
+
+                {/* 4. Workload Wave Chart */}
+                <section className={styles.card}>
+                  <div className={styles.sectionHeader}>
+                    <span className={styles.sectionHeading}>Weekly Workload Wave</span>
+                    <span className={styles.metaLabel}>ESTIMATED OVERHEAD</span>
+                  </div>
+                  <div className={styles.chartArea}>
+                    <svg viewBox="0 0 1000 240" className={styles.lineChart}>
+                      <defs>
+                        <linearGradient id="workloadGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#6366F1" stopOpacity="0.2" />
+                          <stop offset="100%" stopColor="#6366F1" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      {chartData.length > 0 && (
+                        <>
+                          <path 
+                            d={`M 0 240 ${chartData.map((h, i) => `L ${i * (1000/(chartData.length-1))} ${240 - ((h.avg_workload || 0) * 6)}`).join(' ')} L 1000 240 Z`} 
+                            fill="url(#workloadGrad)" 
+                          />
+                          <path 
+                            d={`M 0 ${240 - ((chartData[0].avg_workload || 0) * 6)} ${chartData.map((h, i) => `L ${i * (1000/(chartData.length-1))} ${240 - ((h.avg_workload || 0) * 6)}`).join(' ')}`} 
+                            fill="none" 
+                            stroke="#6366F1" 
+                            strokeWidth="4" 
+                            strokeLinecap="round" 
+                            className={styles.drawPath}
+                          />
+                          <line x1="0" y1={240 - (30.0 * 6)} x2="1000" y2={240 - (30.0 * 6)} 
+                                stroke="#6366F1" strokeWidth="2" strokeDasharray="6,4" opacity="0.6" />
+                          {chartData.map((h, i) => {
+                            const x = i * (1000/(chartData.length-1));
+                            const y = 240 - ((h.avg_workload || 0) * 6);
+                            return (
+                              <circle 
+                                key={`workload-${h.date}`}
+                                cx={x} 
+                                cy={y} 
+                                r="6"
+                                fill="#fff"
+                                stroke="#6366F1"
+                                strokeWidth="3"
+                                style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                                onMouseEnter={() => setHoveredPoint({
+                                  x, y,
+                                  type: 'workload',
+                                  label: 'Academic Load',
+                                  value: h.avg_workload.toFixed(1),
+                                  date: h.date,
+                                  color: '#6366F1'
+                                })}
+                                onMouseLeave={() => setHoveredPoint(null)}
+                              />
+                            );
+                          })}
+                        </>
+                      )}
+                    </svg>
+                    {hoveredPoint && hoveredPoint.type === 'workload' && (
+                      <div 
+                        className={styles.chartTooltip}
+                        style={{ 
+                          left: `${hoveredPoint.x / 10}%`, 
+                          top: `${hoveredPoint.y - 70}px`,
+                          borderLeftColor: hoveredPoint.color
+                        }}
+                      >
+                        <div className={styles.tooltipHeader}>
+                          <span className={styles.tooltipDate}>{new Date(hoveredPoint.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          <span className={styles.tooltipLabel}>{hoveredPoint.label}</span>
+                        </div>
+                        <div className={styles.tooltipValue} style={{ color: hoveredPoint.color }}>
+                          {hoveredPoint.value}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.chartLabels}>
+                    {days.map(d => <span key={d}>{d}</span>)}
+                  </div>
+                </section>
+              </>
+            ) : null}
+
+            {/* 4. Clinical Framework */}
+            <section className={styles.guidelinesSection}>
+              <div className={styles.guideBox}>
+                <div className={styles.guideIcon}><IconTrendingUp /></div>
+                <div className={styles.guideContent}>
+                  <h3>Load Modulation</h3>
+                  <p>In Increasing trend phases, faculty are advised to consider 48h deadline extensions for non-critical cohort tasks.</p>
                 </div>
               </div>
-              <p className={styles.chartNote}>Wave peaks indicate periods of high aggregate cognitive load. Faculty should monitor red nodes as indicators for adaptive curriculum adjustment.</p>
-            </section>
-
-            <section className={`${styles.card} ${styles.guidelinesCard}`}>
-              <div className={styles.sectionHeading}>Clinical Guidelines for Faculty</div>
-              <div className={styles.guidelinesGrid}>
-                <div className={styles.guideItem}>
-                  <div className={styles.guideIcon}><IconCalendar /></div>
-                  <div className={styles.guideContent}>
-                    <h4>Syllabus Flexibility</h4>
-                    <p>During "Increasing" trend phases, consider extending soft deadlines for non-critical assignments.</p>
-                  </div>
-                </div>
-                <div className={styles.guideItem}>
-                  <div className={styles.guideIcon}><IconTrendingUp /></div>
-                  <div className={styles.guideContent}>
-                    <h4>Peak Mitigation</h4>
-                    <p>If the Wave crosses 7.0, a cohort-wide "Recovery Window" (24-48h reduced load) is recommended.</p>
-                  </div>
-                </div>
-                <div className={styles.guideItem}>
-                  <div className={styles.guideIcon}><IconShield /></div>
-                  <div className={styles.guideContent}>
-                    <h4>Privacy Assurance</h4>
-                    <p>You cannot see individual student data. Focus on adjusting group-level academic overhead.</p>
-                  </div>
+              <div className={styles.guideBox}>
+                <div className={styles.guideIcon}><IconUsers /></div>
+                <div className={styles.guideContent}>
+                  <h3>Privacy Assurance</h3>
+                  <p>All data is strictly anonymized at the cohort level. No individual student PII is accessible through this dashboard.</p>
                 </div>
               </div>
             </section>
 
-            <footer className={styles.disclaimer}>
-              <p>PRIVACY NOTICE: Secure anonymized aggregation enabled. Data sourced from encrypted student kinetic and academic logs. Faculty access is limited to cohort-level trends only.</p>
+            <footer className={styles.anonymityFooter}>
+              <p>SECURE AGGREGATED VIEW · MATHEMATICALLY GUARANTEED ANONYMITY · SECURE CLOUD STORAGE</p>
             </footer>
+          </div>
         </div>
       </main>
     </div>
   );
 }
 
+const IconShield = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+  </svg>
+);

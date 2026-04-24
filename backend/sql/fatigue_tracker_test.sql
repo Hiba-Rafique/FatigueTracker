@@ -159,3 +159,65 @@ BEGIN
 
 END;
 /
+-- 1. FIX THE TRIGGER BUG
+CREATE OR REPLACE TRIGGER trg_recommendation_unlock
+AFTER UPDATE OF recommendation_status ON STUDENT_METRICS
+DECLARE
+    v_student_id NUMBER;
+BEGIN
+    BEGIN
+        SELECT student_id
+        INTO v_student_id
+        FROM STUDENT_METRICS
+        WHERE recommendation_status = 'UNLOCKED'
+        AND ROWNUM = 1;
+
+        generate_recommendations(v_student_id);
+
+        UPDATE RECOMMENDATION
+        SET unlocked_at = CURRENT_TIMESTAMP
+        WHERE student_id = v_student_id
+        AND unlocked_at IS NULL;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            NULL; -- Safely ignore if no unlocked students exist yet
+    END;
+END;
+/
+
+-- 2. RE-RUN STUDENT 17 TEST DATA
+DECLARE
+    v_rec_student_id NUMBER := 17;
+    v_counselor_id NUMBER;
+BEGIN
+    -- Ensure student is 14C
+    UPDATE STUDENT SET student_type = '14C' WHERE student_id = v_rec_student_id;
+
+    -- Clear out partial data
+    DELETE FROM RECOMMENDATION WHERE student_id = v_rec_student_id;
+    DELETE FROM STRESS_LOG WHERE student_id = v_rec_student_id;
+    DELETE FROM COUNSELOR_STUDENT WHERE student_id = v_rec_student_id;
+    
+    -- Insert 7 days of logs (this will now properly update metrics without crashing!)
+    FOR i IN 1..7 LOOP
+        INSERT INTO STRESS_LOG (student_id, stress_level, is_primary, log_date)
+        VALUES (v_rec_student_id, 6, 1, TRUNC(SYSDATE) - (7 - i));
+    END LOOP;
+    
+    -- Assign counselor
+    SELECT MIN(counselor_id) INTO v_counselor_id FROM COUNSELOR;
+    INSERT INTO COUNSELOR_STUDENT (counselor_id, student_id, status)
+    VALUES (v_counselor_id, v_rec_student_id, 'ACTIVE');
+
+    -- Insert recommendation
+    INSERT INTO RECOMMENDATION (student_id, type, message, generated_by)
+    VALUES (
+        v_rec_student_id, 'REST', 
+        'Based on your consistent logging, I recommend taking a mandatory clinical rest for 24 hours. Your workload is piling up, prioritize sleep.', 
+        'COUNSELOR'
+    );
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Trigger Fixed and Data Inserted Successfully!');
+END;
+/

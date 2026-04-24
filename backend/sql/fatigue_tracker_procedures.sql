@@ -146,29 +146,29 @@ END;
 -- ============================================================
 -- ZAINA: Login Authentication Procedure
 -- Called by POST /auth/login
--- Returns user_id, role, name for JWT generation
--- Returns -1 if credentials invalid
+-- Returns user_id, role, name, and hash for FastAPI verification
+-- Returns -1 if email not found
 -- ============================================================
 CREATE OR REPLACE PROCEDURE auth_login(
     p_email      IN  VARCHAR2,
-    p_password   IN  VARCHAR2,
     p_user_id    OUT NUMBER,
     p_role       OUT VARCHAR2,
-    p_name       OUT VARCHAR2
+    p_name       OUT VARCHAR2,
+    p_pwd_hash   OUT VARCHAR2
 ) AS
 BEGIN
-    SELECT user_id, role, name
-    INTO   p_user_id, p_role, p_name
+    SELECT user_id, role, name, password_hash
+    INTO   p_user_id, p_role, p_name, p_pwd_hash
     FROM   USERS
     WHERE  LOWER(email)   = LOWER(p_email)
-    AND    password_hash  = p_password
     AND    is_active      = 1;
  
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        p_user_id := -1;
-        p_role    := NULL;
-        p_name    := NULL;
+        p_user_id  := -1;
+        p_role     := NULL;
+        p_name     := NULL;
+        p_pwd_hash := NULL;
 END;
 /
 

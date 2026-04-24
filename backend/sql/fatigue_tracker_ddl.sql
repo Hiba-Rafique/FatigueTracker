@@ -628,3 +628,8 @@ JOIN USERS u ON s.student_id = u.user_id
 LEFT JOIN STUDENT_METRICS sm ON s.student_id = sm.student_id
 WHERE cs.counselor_id = 3        -- replace 3 with your actual counselor's user_id
 AND cs.status = 'ACTIVE';
+
+
+-- Add avg_workload to WEEKLY_SECTION_STATS
+ALTER TABLE WEEKLY_SECTION_STATS ADD avg_workload NUMBER;
+ALTER TABLE WEEKLY_SECTION_STATS ADD critical_count NUMBER;

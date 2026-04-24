@@ -431,21 +431,25 @@ DECLARE
     v_student_id NUMBER;
 BEGIN
     -- Get the student whose status changed
-    SELECT student_id
-    INTO v_student_id
-    FROM STUDENT_METRICS
-    WHERE recommendation_status = 'UNLOCKED'
-    AND ROWNUM = 1;
+    BEGIN
+        SELECT student_id
+        INTO v_student_id
+        FROM STUDENT_METRICS
+        WHERE recommendation_status = 'UNLOCKED'
+        AND ROWNUM = 1;
 
-    -- Call your procedure (safe now)
-    generate_recommendations(v_student_id);
+        -- Call your procedure (safe now)
+        generate_recommendations(v_student_id);
 
-    -- Stamp unlocked_at
-    UPDATE RECOMMENDATION
-    SET unlocked_at = CURRENT_TIMESTAMP
-    WHERE student_id = v_student_id
-    AND unlocked_at IS NULL;
-
+        -- Stamp unlocked_at
+        UPDATE RECOMMENDATION
+        SET unlocked_at = CURRENT_TIMESTAMP
+        WHERE student_id = v_student_id
+        AND unlocked_at IS NULL;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            NULL;
+    END;
 END;
 /
 

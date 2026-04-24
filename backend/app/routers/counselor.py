@@ -83,11 +83,27 @@ def get_student_details(student_id: int, current_user: dict = Depends(require_co
         """, [student_id])
         alerts = [{"alert_id": r[0], "alert_level": r[1], "bri_value": r[2], "created_at": str(r[3]), "status": r[4]} for r in cursor.fetchall()]
 
+        # Behavioral Patterns
+        cursor.execute("""
+            SELECT trigger_category, frequency_count, avg_severity, pattern_summary
+            FROM PATTERN_PROFILE WHERE student_id = :1
+            ORDER BY frequency_count DESC
+        """, [student_id])
+        patterns = [{"category": r[0], "frequency": r[1], "severity": r[2], "summary": r[3]} for r in cursor.fetchall()]
+
+        # Data Baseline (for calibration message)
+        cursor.execute("""
+            SELECT COUNT(DISTINCT TRUNC(log_date)) FROM STRESS_LOG WHERE student_id = :1
+        """, [student_id])
+        days_logged = cursor.fetchone()[0] or 0
+
         return {
             "metrics": metrics,
             "stress_history": stress_history,
             "pending_tasks": tasks,
-            "open_alerts": alerts
+            "open_alerts": alerts,
+            "patterns": patterns,
+            "days_logged": days_logged
         }
     finally:
         cursor.close()
