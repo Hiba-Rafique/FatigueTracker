@@ -33,7 +33,7 @@ def log_stress(data: StressLogRequest, current_user: dict = Depends(require_stud
             user_id=current_user["user_id"],
             action="INSERT_STRESS_LOG",
             target_table="STRESS_LOG",
-            target_id=int(stress_id_var.getvalue()),
+            target_id=int(stress_id_var.getvalue()[0]),
         )
         conn.commit()
         return {"message": "Stress log added successfully"}
@@ -63,7 +63,7 @@ def log_task(data: TaskLogRequest, current_user: dict = Depends(require_student)
             user_id=current_user["user_id"],
             action="INSERT_TASK_LOG",
             target_table="TASK_LOG",
-            target_id=int(task_id_var.getvalue()),
+            target_id=int(task_id_var.getvalue()[0]),
         )
         conn.commit()
         return {"message": "Task added successfully"}
@@ -145,7 +145,7 @@ def log_activity(data: ActivityLogRequest, current_user: dict = Depends(require_
             user_id=current_user["user_id"],
             action="INSERT_ACTIVITY_LOG",
             target_table="ACTIVITY_LOG",
-            target_id=int(activity_id_var.getvalue()),
+            target_id=int(activity_id_var.getvalue()[0]),
         )
         conn.commit()
         return {"message": "Activity logged successfully"}
@@ -429,14 +429,19 @@ def get_benchmarking(current_user: dict = Depends(require_student)):
             raise HTTPException(status_code=403, detail="Benchmarking is only available for 14C students")
 
         cursor.execute("""
-            SELECT
-                sm.bri_score,
-                sm.stress_avg,
-                ROUND(PERCENT_RANK() OVER (ORDER BY sm.bri_score) * 100, 1) AS bri_percentile,
-                ROUND(PERCENT_RANK() OVER (ORDER BY sm.stress_avg) * 100, 1) AS stress_percentile
-            FROM STUDENT_METRICS sm
-            JOIN STUDENT s ON sm.student_id = s.student_id
-            WHERE s.student_type = '14C' AND sm.student_id = :1
+            SELECT bri_score, stress_avg, bri_percentile, stress_percentile
+            FROM (
+                SELECT
+                    sm.student_id,
+                    sm.bri_score,
+                    sm.stress_avg,
+                    ROUND(PERCENT_RANK() OVER (ORDER BY sm.bri_score) * 100, 1) AS bri_percentile,
+                    ROUND(PERCENT_RANK() OVER (ORDER BY sm.stress_avg) * 100, 1) AS stress_percentile
+                FROM STUDENT_METRICS sm
+                JOIN STUDENT s ON sm.student_id = s.student_id
+                WHERE s.student_type = '14C'
+            )
+            WHERE student_id = :1
         """, [current_user["user_id"]])
         row = cursor.fetchone()
         if not row:

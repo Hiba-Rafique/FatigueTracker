@@ -12,6 +12,16 @@ export default function LoginPage() {
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [success,  setSuccess]  = useState(false);
+  const [shifting, setShifting] = useState(false);
+
+  const handleRegisterClick = (e) => {
+    e.preventDefault();
+    setShifting(true);
+    setTimeout(() => {
+      window.location.href = '/register';
+    }, 600);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -27,17 +37,23 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.detail || 'Invalid email or password.');
+        setLoading(false);
         return;
       }
+      
+      setSuccess(true);
       const role = data.role_id?.toUpperCase();
-      if      (role === 'STUDENT')   window.location.href = '/student';
-      else if (role === 'COUNSELOR') window.location.href = '/counselor';
-      else if (role === 'FACULTY')   window.location.href = '/faculty';
-      else if (role === 'ADMIN')     window.location.href = '/admin';
-      else                           window.location.href = '/';
+      
+      setTimeout(() => {
+        if      (role === 'STUDENT')   window.location.href = '/student';
+        else if (role === 'COUNSELOR') window.location.href = '/counselor';
+        else if (role === 'FACULTY')   window.location.href = '/faculty';
+        else if (role === 'ADMIN')     window.location.href = '/admin';
+        else                           window.location.href = '/';
+      }, 600);
+      
     } catch {
       setError('Could not connect to the server. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
@@ -52,66 +68,85 @@ export default function LoginPage() {
         </div>
 
         <div className={styles.formBody}>
-          <h1 className={styles.heading}>Sign in</h1>
-          <p className={styles.sub}>NUST SEECS · Student Wellness Platform</p>
+          {!success ? (
+            <>
+              <h1 className={styles.heading}>Sign in</h1>
+              <p className={styles.sub}>NUST SEECS · Student Wellness Platform</p>
 
-          <form onSubmit={handleLogin} className={styles.form} noValidate>
-            <div className={styles.field}>
-              <label className={styles.label}>Email</label>
-              <input
-                className={styles.input}
-                type="email"
-                placeholder="you@students.nust.edu.pk"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
-            </div>
+              <form onSubmit={handleLogin} className={styles.form} noValidate>
+                <div className={styles.field}>
+                  <label className={styles.label}>Email</label>
+                  <input
+                    className={styles.input}
+                    type="email"
+                    placeholder="you@students.nust.edu.pk"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                  />
+                </div>
 
-            <div className={styles.field}>
-              <label className={styles.label}>Password</label>
-              <div className={styles.passWrap}>
-                <input
-                  className={styles.input}
-                  type={showPass ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
-                <button type="button" className={styles.eyeBtn} onClick={() => setShowPass(p => !p)} tabIndex={-1}>
-                  <EyeIcon open={showPass} />
+                <div className={styles.field}>
+                  <label className={styles.label}>Password</label>
+                  <div className={styles.passWrap}>
+                    <input
+                      className={styles.input}
+                      type={showPass ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      required
+                      autoComplete="current-password"
+                    />
+                    <button type="button" className={styles.eyeBtn} onClick={() => setShowPass(p => !p)} tabIndex={-1}>
+                      <EyeIcon open={showPass} />
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className={styles.errorBox}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    {error}
+                  </div>
+                )}
+
+                <button type="submit" className={styles.submitBtn} disabled={loading}>
+                  {loading ? <><span className={styles.spinner} /> Signing in…</> : 'Sign in →'}
                 </button>
+              </form>
+
+              <div className={styles.registerRow}>
+                New here? <a href="/register" onClick={handleRegisterClick} className={styles.registerLink}>Create an account</a>
               </div>
+            </>
+          ) : (
+            <div className={styles.welcomeState}>
+              <h1 className={styles.welcomeHeading}>Welcome.</h1>
+              <div className={styles.welcomeLoader} />
             </div>
-
-            {error && (
-              <div className={styles.errorBox}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                {error}
-              </div>
-            )}
-
-            <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? <><span className={styles.spinner} /> Signing in…</> : 'Sign in →'}
-            </button>
-          </form>
-
-          <div className={styles.registerRow}>
-            New here? <a href="/register" className={styles.registerLink}>Create an account</a>
-          </div>
+          )}
         </div>
 
         <p className={styles.formFooter}>Spring 2026 · All data encrypted at rest</p>
       </div>
 
       <div className={styles.infoSide}>
+        <div className={styles.morphBlob} />
+        <div className={styles.morphBlob} />
+        <div className={styles.morphBlob} />
+        <div className={styles.orbitingCircle} />
+        <div className={styles.lightStreak} />
+        <div className={styles.lightStreak} />
+        <div className={styles.infoSideInner} />
+        
         <h2 className={styles.infoHeading}>
-          Student<br />Wellness<br />Platform.
+          <span className={styles.revealWord}>Student</span><br />
+          <span className={styles.revealWord}>Wellness</span><br />
+          <span className={styles.revealWord}>Platform.</span>
         </h2>
       </div>
 

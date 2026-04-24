@@ -3,6 +3,9 @@
 import React, { useState } from 'react';
 import styles from './page.module.css';
 
+const API_HOST = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+const BASE = `http://${API_HOST}:8000`;
+
 export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
@@ -14,6 +17,15 @@ export default function RegisterPage() {
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState('');
   const [success,     setSuccess]     = useState(false);
+  const [shifting,    setShifting]    = useState(false);
+
+  const handleLoginClick = (e) => {
+    e.preventDefault();
+    setShifting(true);
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 600);
+  };
 
   const set = (key) => (e) => {
     setError('');
@@ -58,7 +70,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -84,6 +96,10 @@ export default function RegisterPage() {
   if (success) {
     return (
       <div className={styles.root}>
+        <div className={styles.infoSide}>
+          <div className={styles.infoSideInner} />
+          <h2 className={styles.infoHeading}>Student<br />Wellness<br />Platform.</h2>
+        </div>
         <div className={styles.formSide}>
           <div className={styles.wordmark}>
             <div className={styles.wordmarkDot} />
@@ -107,9 +123,6 @@ export default function RegisterPage() {
           </div>
           <p className={styles.formFooter}>Spring 2026 · All data encrypted at rest</p>
         </div>
-        <div className={styles.infoSide}>
-          <h2 className={styles.infoHeading}>Student<br />Wellness<br />Platform.</h2>
-        </div>
       </div>
     );
   }
@@ -117,7 +130,12 @@ export default function RegisterPage() {
   return (
     <div className={styles.root}>
 
-      <div className={styles.formSide}>
+      <div className={`${styles.infoSide} ${shifting ? styles.infoSideShiftRight : ''}`}>
+        <div className={styles.infoSideInner} />
+        <h2 className={styles.infoHeading}>Student<br />Wellness<br />Platform.</h2>
+      </div>
+
+      <div className={`${styles.formSide} ${shifting ? styles.formSideShiftLeft : ''}`}>
         <div className={styles.wordmark}>
           <div className={styles.wordmarkDot} />
           <span>Fatigue Tracker</span>
@@ -233,15 +251,11 @@ export default function RegisterPage() {
           )}
 
           <div className={styles.registerRow}>
-            Already have an account? <a href="/login" className={styles.registerLink}>Sign in</a>
+            Already have an account? <a href="/login" onClick={handleLoginClick} className={styles.registerLink}>Sign in</a>
           </div>
         </div>
 
         <p className={styles.formFooter}>Spring 2026 · All data encrypted at rest</p>
-      </div>
-
-      <div className={styles.infoSide}>
-        <h2 className={styles.infoHeading}>Student<br />Wellness<br />Platform.</h2>
       </div>
 
     </div>

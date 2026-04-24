@@ -1,9 +1,6 @@
 fastapi
 uvicorn[standard]
 oracledb
+python-jose[cryptography]
+bcrypt
 python-dotenv
-pydantic
-sqlalchemy
-passlib[bcrypt]
-python-multipart
-python-jose

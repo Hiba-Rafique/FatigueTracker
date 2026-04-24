@@ -2,6 +2,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './page.module.css';
 
+const API_HOST = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+const BASE = `http://${API_HOST}:8000`;
+const api = (path, opts = {}) =>
+  fetch(`${BASE}${path}`, {
+    ...opts,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+  });
+
 // Violet Icons
 const IconHome = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
 const IconUsers = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>;
@@ -19,13 +28,22 @@ export default function CounselorDashboard() {
   
   const [recMsg, setRecMsg] = useState("");
   const [recType, setRecType] = useState("REST");
+  const [toast, setToast] = useState(null);
   const prevAlertCount = useRef(0);
 
-  const AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJyb2xlIjoiQ09VTlNFTE9SIiwiZXhwIjoxNzc2ODc4NTgzfQ.Pu396PODt3YPiaUvruO-sF4bIatsEaTlPPUZGW2jJME";
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleLogout = async () => {
+    try { await api('/auth/logout', { method: 'POST' }); } catch {}
+    window.location.href = '/login';
+  };
 
   const fetchDetails = async (sid) => {
     try {
-      const response = await fetch(`/api/counselor/students/${sid}`, { headers: { 'Authorization': AUTH_TOKEN } });
+      const response = await api(`/api/counselor/students/${sid}`);
       const data = await response.json();
       setDetails(data);
       if (data.open_alerts?.length > prevAlertCount.current) {
@@ -38,7 +56,7 @@ export default function CounselorDashboard() {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const response = await fetch('/api/counselor/students', { headers: { 'Authorization': AUTH_TOKEN } });
+        const response = await api('/api/counselor/students');
         const data = await response.json();
         setStudents(data.students || []);
         const preferred = (data.students || []).find(s => s.student_id === 5 || s.student_id === "5") || data.students?.[0];
@@ -57,20 +75,25 @@ export default function CounselorDashboard() {
   }, [activeStudent]);
 
   const handleResolve = async (alertId) => {
-    await fetch(`/api/counselor/alerts/${alertId}/resolve`, { method: 'PUT', headers: { 'Authorization': AUTH_TOKEN } });
+    await api(`/api/counselor/alerts/${alertId}/resolve`, { method: 'PUT' });
     setDetails(prev => ({ ...prev, open_alerts: prev.open_alerts.filter(a => a.alert_id !== alertId) }));
   };
 
   const handleRecommend = async () => {
-    if (!recMsg) return alert("Clinical notes required.");
-    await fetch('/api/counselor/recommend', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': AUTH_TOKEN },
-      body: JSON.stringify({ student_id: activeStudent.student_id, recommend_type: recType, message: recMsg })
-    });
-    setShowModal(false);
-    setRecMsg("");
-    alert("Intervention strategy deployed.");
+    if (!recMsg) return showToast("Clinical notes required.", "error");
+    try {
+      const res = await api('/api/counselor/recommend', {
+        method: 'POST',
+        body: JSON.stringify({ student_id: activeStudent.student_id, recommend_type: recType, message: recMsg })
+      });
+      if (!res.ok) throw new Error("Failed");
+      
+      setShowModal(false);
+      setRecMsg("");
+      showToast("Intervention strategy deployed.");
+    } catch (err) {
+      showToast("Deployment failed.", "error");
+    }
   };
 
   const getRingColor = (score) => {
@@ -91,12 +114,16 @@ export default function CounselorDashboard() {
 
   return (
     <div className={styles.container} onClick={() => setShowNotifications(false)}>
+      {toast && (
+        <div className={`${styles.toast} ${toast.type === 'error' ? styles.toastError : styles.toastSuccess}`}>
+          {toast.msg}
+        </div>
+      )}
       <header className={styles.topBar}>
         <div className={styles.brand}>
           <span className={styles.appName}>Fatigue Tracker</span>
         </div>
         <nav className={styles.topNav}>
-          <div className={styles.navIcon} style={{ color: 'var(--violet-vivid)' }}><IconHome /></div>
           
           <div className={styles.bellContainer} onClick={(e) => { e.stopPropagation(); setShowNotifications(!showNotifications); }}>
             <div className={styles.navIcon} style={{ color: 'var(--text-secondary)' }}><IconBell /></div>
@@ -128,7 +155,9 @@ export default function CounselorDashboard() {
             )}
           </div>
           <div style={{ width: 2, height: 16, background: 'var(--border-nav)' }} />
-          <div className={styles.navIcon} style={{ color: 'var(--text-secondary)' }}><IconLogOut /></div>
+          <button className={styles.logoutBtn} onClick={handleLogout} title="Logout">
+            <IconLogOut />
+          </button>
         </nav>
       </header>
 
@@ -165,7 +194,7 @@ export default function CounselorDashboard() {
               </div>
               <div className={styles.headerActions}>
                 <button className={styles.compactActionBtn} onClick={() => setShowModal(true)}>
-                   Add Clinical Intervention
+                   Add Recommendation
                 </button>
               </div>
             </header>
@@ -247,16 +276,40 @@ export default function CounselorDashboard() {
               <section className={styles.card}>
                 <div className={styles.sectionHeading}>Behavioral patterns</div>
                 <div className={styles.patternGrid}>
-                  <div className={styles.patternBox}>
-                     <div className={styles.patternContent}>
-                       <p className={styles.patternTitle}>Longitudinal Pattern Detection</p>
-                       <p className={styles.patternStatus}>Initializing: Insufficient Baseline Data (14/30 Days)</p>
-                       <div className={styles.patternProgress}><div className={styles.patternFill} style={{ width: '46%' }} /></div>
-                     </div>
-                  </div>
-                  <div className={styles.patternMessage}>
-                    Clinical pattern recognition is currently calibrating. Behavioral subject insights require a minimum 30-day continuous data baseline to adjust for individual variance and detect statistically significant anomalies.
-                  </div>
+                  {details.patterns && details.patterns.length > 0 ? (
+                    details.patterns.map((p, idx) => (
+                      <div key={idx} className={styles.patternBox} style={{ marginBottom: idx === details.patterns.length - 1 ? 0 : 16 }}>
+                        <div className={styles.patternContent}>
+                          <p className={styles.patternTitle}>{p.category.replace(/_/g, ' ')}</p>
+                          <p className={styles.patternStatus}>
+                            Frequency: {p.frequency} incidents · Avg Severity: {p.severity?.toFixed(1) || 'N/A'}
+                          </p>
+                          <p className={styles.patternSummaryText}>{p.summary}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <div className={styles.patternBox}>
+                         <div className={styles.patternContent}>
+                           <p className={styles.patternTitle}>Longitudinal Pattern Detection</p>
+                           <p className={styles.patternStatus}>
+                             {details.days_logged >= 30 
+                               ? "Analyzing: Processing 30+ Day Baseline..." 
+                               : `Initializing: Insufficient Baseline Data (${details.days_logged}/30 Days)`}
+                           </p>
+                           <div className={styles.patternProgress}>
+                             <div className={styles.patternFill} style={{ width: `${Math.min((details.days_logged / 30) * 100, 100)}%` }} />
+                           </div>
+                         </div>
+                      </div>
+                      <div className={styles.patternMessage}>
+                        {details.days_logged >= 30 
+                          ? "The system has gathered sufficient baseline data and is currently running the weekly pattern recognition job. Results will appear here shortly."
+                          : "Clinical pattern recognition is currently calibrating. Behavioral subject insights require a minimum 30-day continuous data baseline to adjust for individual variance and detect statistically significant anomalies."}
+                      </div>
+                    </>
+                  )}
                 </div>
               </section>
             </div>
@@ -274,8 +327,9 @@ export default function CounselorDashboard() {
             
             <select className={styles.input} value={recType} onChange={e => setRecType(e.target.value)}>
               <option value="REST">Mandatory Clinical Rest</option>
-              <option value="DEFER">Academic Workload Deferral</option>
-              <option value="MEET">One-on-One Session</option>
+              <option value="DEFER_TASK">Academic Workload Deferral</option>
+              <option value="CONTACT_COUNSELOR">One-on-One Clinical Session</option>
+              <option value="RESOURCE">Wellness Resource Assignment</option>
             </select>
             
             <textarea className={styles.input} style={{ height: 100, resize: 'none' }} placeholder="Clinical reasoning..." value={recMsg} onChange={e => setRecMsg(e.target.value)} />
