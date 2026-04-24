@@ -1,10 +1,10 @@
-# 🧠 Smart Student Mental Fatigue & Adaptive Workload Tracker
+# Smart Student Mental Fatigue & Adaptive Workload Tracker
 
 A high-resolution clinical oversight and student wellness platform built with **Next.js**, **FastAPI**, and **Oracle XE**.
 
 ---
 
-## 🚀 Quick Start (Automated Setup)
+## Quick Start (Automated Setup)
 
 The system now includes a unified orchestration script that handles database initialization, logic deployment, and data seeding in one command.
 
@@ -45,7 +45,7 @@ Access the application at `http://localhost:3000`.
 
 ---
 
-## 🧪 Testing Personas (Seeded Data)
+## Testing Personas (Seeded Data)
 
 The following accounts are pre-seeded with 5 weeks of historical analytics and active clinical states:
 
@@ -57,12 +57,12 @@ The following accounts are pre-seeded with 5 weeks of historical analytics and a
 
 ---
 
-## 🛡️ Security Features
+## Security Features
 - **Bcrypt Hashing**: All passwords are cryptographically hashed using direct `bcrypt` integration (industry standard).
 - **JWT Authentication**: Secure, cookie-based sessions with HttpOnly flags to prevent XSS.
 - **Role-Based Access Control (RBAC)**: Strict separation between Student, Counselor, and Faculty dashboards.
 
-## 📊 Database Architecture
+## Database Architecture
 The system utilizes **Oracle XE** for high-integrity clinical data management:
 - **PL/SQL Engine**: Automated Weekly Pulse generation and Adaptive Recommendation logic.
 - **Triggers**: Real-time alerting for Behavioral Risk Index (BRI) spikes.
