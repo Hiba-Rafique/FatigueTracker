@@ -67,9 +67,11 @@ def seed_database():
         default_pwd = bcrypt.hashpw("fatigue123".encode('utf-8'), salt).decode('utf-8')
         
         users = [
-            # ID 1: Counselor
+            # ID 1: Admin
+            ('System Admin', 'admin@nust.edu.pk', default_pwd, 'ADMIN'),
+            # ID 2: Counselor
             ('Dr. Sarah Jenkins', 'counselor@nust.edu.pk', default_pwd, 'COUNSELOR'),
-            # ID 2: Faculty
+            # ID 3: Faculty
             ('Prof. Michael Scott', 'faculty@nust.edu.pk', default_pwd, 'FACULTY'),
             # ID 3: Primary Student (14C)
             ('Hiba Rafique', 'hiba.rafique@students.nust.edu.pk', default_pwd, 'STUDENT'),
@@ -108,6 +110,8 @@ def seed_database():
                 cursor.execute("INSERT INTO COUNSELOR (counselor_id, specialization) VALUES (:1, 'General')", [uid])
             elif role == 'FACULTY':
                 cursor.execute("INSERT INTO FACULTY (faculty_id, department) VALUES (:1, 'CS')", [uid])
+            elif role == 'ADMIN':
+                cursor.execute("INSERT INTO ADMIN (admin_id, permissions) VALUES (:1, 'FULL')", [uid])
 
         counselor_id = user_id_map['counselor@nust.edu.pk']
         faculty_id = user_id_map['faculty@nust.edu.pk']
