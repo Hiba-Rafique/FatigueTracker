@@ -58,6 +58,7 @@ The following accounts are pre-seeded with 5 weeks of historical analytics and a
 
 | Role | Email | Password | Features to Test |
 | :--- | :--- | :--- | :--- |
+| **Admin** | `admin@nust.edu.pk` | `fatigue123` | System configuration, audit logs, thresholds. |
 | **Faculty** | `faculty@nust.edu.pk` | `fatigue123` | Interactive cohort charts, daily drill-downs, critical census tracking. |
 | **Counselor** | `counselor@nust.edu.pk` | `fatigue123` | Student roster, active alerts, stress trend evaluation, interventions. |
 | **Student** | `hiba.rafique@students.nust.edu.pk` | `fatigue123` | Stress/Task logging, peer benchmarking (14C), personalized recommendations. |
