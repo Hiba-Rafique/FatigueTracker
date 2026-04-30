@@ -3,7 +3,12 @@ import os
 import datetime
 import random
 import bcrypt
+import sys
+import io
 from dotenv import load_dotenv
+
+# Fix for windows charmap encode errors when printing emojis
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # Load DB credentials
 load_dotenv()
@@ -24,8 +29,9 @@ def seed_database():
         tables = [
             "NOTIFICATION_LOG", "AUDIT_LOG", "ALERT", "RECOMMENDATION", 
             "PATTERN_PROFILE", "COUNSELOR_STUDENT", "ACTIVITY_LOG", 
-            "TASK_LOG", "STRESS_LOG", "STUDENT_METRICS", "STUDENT", 
-            "USERS", "EMAIL_WHITELIST", "WEEKLY_SECTION_STATS", "SYSTEM_CONFIG"
+            "TASK_LOG", "STRESS_LOG", "STUDENT_METRICS", "EMAIL_WHITELIST", "STUDENT", 
+            "ADMIN", "FACULTY", "COUNSELOR", "USERS", 
+            "WEEKLY_SECTION_STATS", "SYSTEM_CONFIG"
         ]
         for table in tables:
             try:
@@ -37,8 +43,8 @@ def seed_database():
 
         # ── 2. SYSTEM CONFIG ─────────────────────────────────────────
         cursor.execute("""
-            INSERT INTO SYSTEM_CONFIG (config_id, bri_threshold_yellow, bri_threshold_red, pattern_window_days, academic_workload_limit)
-            VALUES (1, 50, 75, 14, 30.0)
+            INSERT INTO SYSTEM_CONFIG (config_id, bri_watch, bri_warning, bri_critical, pattern_window_days)
+            VALUES (1, 40, 60, 80, 30)
         """)
         
         whitelist_emails = [
@@ -50,7 +56,8 @@ def seed_database():
             ('bilal.nasir@gmail.com', '14C')
         ]
         for email, stype in whitelist_emails:
-            cursor.execute("INSERT INTO EMAIL_WHITELIST (email, student_type) VALUES (:1, :2)", [email, stype])
+            if stype == '14C':
+                cursor.execute("INSERT INTO EMAIL_WHITELIST (email) VALUES (:1)", [email])
         
         print("⚙️ System configuration and whitelist seeded.")
 
@@ -93,8 +100,14 @@ def seed_database():
                 stype = next(x[1] for x in whitelist_emails if x[0] == email)
                 cursor.execute("INSERT INTO STUDENT (student_id, student_type) VALUES (:1, :2)", [uid, stype])
                 cursor.execute("INSERT INTO STUDENT_METRICS (metric_id, student_id) VALUES (SEQ_METRIC_ID.NEXTVAL, :1)", [uid])
-                # Mark whitelist as used
-                cursor.execute("UPDATE EMAIL_WHITELIST SET is_used = 1, student_id = :1 WHERE email = :2", [uid, email])
+                
+                if stype == '14C':
+                    # Mark whitelist as used
+                    cursor.execute("UPDATE EMAIL_WHITELIST SET is_used = 1, student_id = :1 WHERE email = :2", [uid, email])
+            elif role == 'COUNSELOR':
+                cursor.execute("INSERT INTO COUNSELOR (counselor_id, specialization) VALUES (:1, 'General')", [uid])
+            elif role == 'FACULTY':
+                cursor.execute("INSERT INTO FACULTY (faculty_id, department) VALUES (:1, 'CS')", [uid])
 
         counselor_id = user_id_map['counselor@nust.edu.pk']
         faculty_id = user_id_map['faculty@nust.edu.pk']
@@ -157,9 +170,8 @@ def seed_database():
             # Add an open alert for Sara
             if email == 'sara.khan@gmail.com':
                 cursor.execute("""
-                    INSERT INTO ALERT (alert_id, student_id, counselor_id, type, severity, message)
-                    VALUES (SEQ_ALERT_ID.NEXTVAL, :1, :2, 'HIGH_STRESS', 'CRITICAL', 
-                            'Sustained high stress detected (Avg 8.4) over last 5 days.')
+                    INSERT INTO ALERT (alert_id, student_id, counselor_id, alert_level, bri_value)
+                    VALUES (SEQ_ALERT_ID.NEXTVAL, :1, :2, 'CRITICAL', 85)
                 """, [uid, counselor_id])
 
         print("⚖️ Counselor assignments and alerts generated.")
@@ -168,9 +180,9 @@ def seed_database():
         # We manually update metrics to ensure interesting distribution for benchmarking
         metrics_data = [
             ('hiba.rafique@students.nust.edu.pk', 45.5, 5.2, 18.0, 12, 'STABLE'),
-            ('zainab.ali@students.nust.edu.pk', 52.0, 6.1, 22.5, 10, 'INCREASING'),
-            ('omar.farooq@gmail.com', 30.2, 3.8, 12.0, 15, 'DECREASING'),
-            ('sara.khan@gmail.com', 88.4, 8.9, 45.0, 5, 'INCREASING'), # CRITICAL Student
+            ('zainab.ali@students.nust.edu.pk', 52.0, 6.1, 22.5, 10, 'DETERIORATING'),
+            ('omar.farooq@gmail.com', 30.2, 3.8, 12.0, 15, 'IMPROVING'),
+            ('sara.khan@gmail.com', 88.4, 8.9, 45.0, 5, 'DETERIORATING'), # CRITICAL Student
             ('bilal.nasir@gmail.com', 15.1, 2.8, 8.0, 20, 'STABLE'),
         ]
         for email, bri, stress, workload, activity, trend in metrics_data:
