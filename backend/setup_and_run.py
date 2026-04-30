@@ -3,7 +3,11 @@ import os
 import subprocess
 import sys
 import time
+import io
 from dotenv import load_dotenv
+
+# Fix for windows charmap encode errors when printing emojis
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # Load environment variables
 load_dotenv()

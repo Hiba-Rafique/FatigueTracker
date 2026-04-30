@@ -13,7 +13,12 @@ The system now includes a unified orchestration script that handles database ini
 - **Python 3.10+** installed.
 - **Node.js** (for the frontend).
 
-### 2. Environment Configuration
+### 2. Database User Setup (Oracle XE)
+Before running the application, you must create the dedicated database user.
+1. Connect to your Oracle XE database as `sys` or `system` (SYSDBA).
+2. Execute the `backend/sql/create_user.sql` script to create the `fatigue_tracker` user and grant the necessary permissions.
+
+### 3. Environment Configuration
 1. Navigate to the `backend/` directory.
 2. Create a `.env` file (copy from `.env.example` if available) and ensure your Oracle credentials are correct:
    ```env
@@ -23,19 +28,21 @@ The system now includes a unified orchestration script that handles database ini
    SECRET_KEY=your_secret_key_here
    ```
 
-### 3. Initialize & Launch Backend
+### 4. Initialize Database, Seed Data & Launch Backend
+The system includes a unified orchestration script that handles database creation, logic deployment, and data seeding in one command.
+
 Run the following command in the `backend/` directory:
 ```powershell
 pip install -r requirements.txt
 python setup_and_run.py
 ```
 **This script will automatically:**
-- Create all tables, sequences, and indices.
-- Deploy stored procedures, triggers, and scheduled jobs.
-- Seed the database with high-resolution test personas and historical data.
+- Execute the DDL script to drop and recreate all tables, sequences, and indices.
+- Deploy stored procedures, triggers, and scheduled jobs to the database.
+- Seed the database with high-resolution test personas, historical data, and securely hashed passwords (`bcrypt`).
 - Start the FastAPI server on `http://127.0.0.1:8000`.
 
-### 4. Launch Frontend
+### 5. Launch Frontend
 Open a new terminal in the `frontend/` directory:
 ```powershell
 npm install
