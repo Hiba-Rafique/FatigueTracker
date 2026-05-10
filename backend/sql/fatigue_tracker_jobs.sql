@@ -2,7 +2,6 @@
 -- SCHEDULED JOBS 
 
 -- ── Job 1: calculate_weekly_stats ───────────────────────────
-
 -- Update the weekly stats procedure
 CREATE OR REPLACE PROCEDURE job_calculate_weekly_stats AS
     v_avg_stress NUMBER;

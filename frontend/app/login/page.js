@@ -63,8 +63,7 @@ export default function LoginPage() {
 
       <div className={styles.formSide}>
         <div className={styles.wordmark}>
-          <div className={styles.wordmarkDot} />
-          <span>Fatigue Tracker</span>
+
         </div>
 
         <div className={styles.formBody}>

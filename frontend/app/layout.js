@@ -7,7 +7,7 @@ const openSans = Open_Sans({
 });
 
 export const metadata = {
-  title: "Fatigue Tracker | Counselor Dashboard",
+  title: "Fatigue Tracker",
   description: "Advanced student mental fatigue and adaptive workload monitoring.",
 };
 

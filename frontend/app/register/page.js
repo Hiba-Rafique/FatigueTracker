@@ -101,10 +101,7 @@ export default function RegisterPage() {
           <h2 className={styles.infoHeading}>Student<br />Wellness<br />Platform.</h2>
         </div>
         <div className={styles.formSide}>
-          <div className={styles.wordmark}>
-            <div className={styles.wordmarkDot} />
-            <span>Fatigue Tracker</span>
-          </div>
+
           <div className={styles.formBody}>
             <div className={styles.successIcon}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -137,8 +134,7 @@ export default function RegisterPage() {
 
       <div className={`${styles.formSide} ${shifting ? styles.formSideShiftLeft : ''}`}>
         <div className={styles.wordmark}>
-          <div className={styles.wordmarkDot} />
-          <span>Fatigue Tracker</span>
+  
         </div>
 
         <div className={styles.formBody}>
