@@ -1,6 +1,7 @@
 # Smart Student Mental Fatigue & Adaptive Workload Tracker
 
 A high-resolution clinical oversight and student wellness platform built with **Next.js**, **FastAPI**, and **Oracle XE**.
+Created by Zaina Zia (501113) and Hiba Rafique (501846)
 
 ---
 
